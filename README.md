@@ -1,48 +1,133 @@
-# Welcome to your new ignited app!
+# Dooit - Modern To-Do List App
 
-> The latest and greatest boilerplate for Infinite Red opinions
+![Dooit Logo](./assets/images/app-icon-all.png)
 
-This is the boilerplate that [Infinite Red](https://infinite.red) uses as a way to test bleeding-edge changes to our React Native stack.
+A powerful and user-friendly to-do list application built with React Native and Parse Server. Dooit helps you stay organized and productive with its intuitive interface and robust features.
 
-- [Quick start documentation](https://github.com/infinitered/ignite/blob/master/docs/boilerplate/Boilerplate.md)
-- [Full documentation](https://github.com/infinitered/ignite/blob/master/docs/README.md)
+## 🚀 Features
 
-## Getting Started
+### Core Features
+- 📝 Task Management
+  - Create, edit, and delete tasks
+  - Mark tasks as complete/incomplete
+  - Add task descriptions and due dates
+  - Real-time synchronization
 
+- 🔐 User Authentication
+  - Email/password sign-up and login
+  - Persistent user sessions
+  - Secure task storage
+
+### Advanced Features
+- ⚡ Real-time Updates
+  - Automatic task list refresh
+  - Instant task changes
+  - Cross-device sync
+
+- 📅 Calendar Integration
+  - View tasks by date
+  - Set task reminders
+  - Monthly/weekly views
+
+- 🎨 User Interface
+  - Clean and modern design
+  - Responsive layout
+  - Intuitive navigation
+  - Dark/light theme support
+
+## 🛠 Tech Stack
+
+- **Frontend**
+  - React Native with Ignite
+  - Expo SDK
+  - React Navigation
+  - MobX State Tree
+
+- **Backend**
+  - Parse Server
+  - MongoDB
+  - Parse LiveQuery
+
+## 📱 Getting Started
+
+### Prerequisites
+- Node.js (v14 or higher)
+- Expo CLI
+- Git
+- Android Studio / Xcode (for native development)
+
+### Installation
+
+1. Clone the repository
+```bash
+git clone [repository-url]
+cd dooit
+```
+
+2. Install dependencies
 ```bash
 yarn install
+```
+
+3. Configure Parse Server
+- Set up your Parse Server instance
+- Update environment variables in `.env` file
+
+4. Start the development server
+```bash
 yarn start
 ```
 
-To make things work on your local simulator, or on your phone, you need first to [run `eas build`](https://github.com/infinitered/ignite/blob/master/docs/expo/EAS.md). We have many shortcuts on `package.json` to make it easier:
+## 📱 Running the App
 
+### Development
 ```bash
-yarn build:ios:sim # build for ios simulator
-yarn build:ios:dev # build for ios device
-yarn build:ios:prod # build for ios device
+# Start development server
+yarn start
+
+# Run on iOS simulator
+yarn ios
+
+# Run on Android emulator
+yarn android
 ```
 
-### `./assets` directory
+### Production Build
+```bash
+# Build for iOS simulator
+yarn build:ios:sim
 
-This directory is designed to organize and store various assets, making it easy for you to manage and use them in your application. The assets are further categorized into subdirectories, including `icons` and `images`:
+# Build for iOS device
+yarn build:ios:dev
+
+# Build for production
+yarn build:ios:prod
+```
+
+## 📂 Project Structure
+
+```tree
+app/
+├── assets/         # App assets (images, fonts, etc.)
+├── components/     # Reusable UI components
+├── screens/        # Screen components
+├── services/       # Parse Server integration
+├── stores/         # MobX stores
+├── styles/         # Global styles
+└── utils/         # Utility functions
+```
+
+## 📱 Assets Directory
+
+This directory is organized to store various app assets:
 
 ```tree
 assets
-├── icons
-└── images
+├── icons/         # App icons and UI icons
+└── images/        # Background images and other graphics
 ```
 
-**icons**
-This is where your icon assets will live. These icons can be used for buttons, navigation elements, or any other UI components. The recommended format for icons is PNG, but other formats can be used as well.
-
-Ignite comes with a built-in `Icon` component. You can find detailed usage instructions in the [docs](https://github.com/infinitered/ignite/blob/master/docs/boilerplate/app/components/Icon.md).
-
-**images**
-This is where your images will live, such as background images, logos, or any other graphics. You can use various formats such as PNG, JPEG, or GIF for your images.
-
-Another valuable built-in component within Ignite is the `AutoImage` component. You can find detailed usage instructions in the [docs](https://github.com/infinitered/ignite/blob/master/docs/Components-AutoImage.md).
-
-How to use your `icon` or `image` assets:
+### Using Assets
 
 ```typescript
 import { Image } from 'react-native';
