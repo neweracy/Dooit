@@ -42,7 +42,6 @@ A powerful and user-friendly to-do list application built with React Native and 
   - Clean and modern design
   - Responsive layout
   - Intuitive navigation
-  - Dark/light theme support
 
 ## 🛠 Tech Stack
 
