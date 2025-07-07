@@ -3,7 +3,7 @@
   "displayName": "Dooit",
   "expo": {
     "name": "Dooit",
-    "slug": "Dooit",
+    "slug": "dooit",
     "scheme": "dooit",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -24,16 +24,25 @@
         "foregroundImage": "./assets/images/app-icon-android-adaptive-foreground.png",
         "backgroundImage": "./assets/images/app-icon-android-adaptive-background.png"
       },
-      "allowBackup": false
+      "allowBackup": false,
+      "splash": {
+        "backgroundColor": "#fff"
+      }
     },
     "ios": {
       "icon": "./assets/images/app-icon-ios.png",
       "supportsTablet": true,
-      "bundleIdentifier": "com.dooit"
+      "bundleIdentifier": "com.dooit",
+      "splash": {
+        "backgroundColor": "#fff"
+      }
     },
     "web": {
       "favicon": "./assets/images/app-icon-web-favicon.png",
-      "bundler": "metro"
+      "bundler": "metro",
+      "splash": {
+        "backgroundColor": "#fff"
+      }
     },
     "plugins": [
       "expo-localization",
@@ -44,12 +53,21 @@
           "image": "./assets/images/app-icon-android-adaptive-foreground.png",
           "imageWidth": 300,
           "resizeMode": "contain",
-          "backgroundColor": "#191015"
+          "backgroundColor": "#fff"
         }
       ]
     ],
     "experiments": {
       "tsconfigPaths": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "8c1b6398-e0a8-4a03-aef1-b02d1771090d"
+      }
+    },
+    "owner": "neweracy",
+    "splash": {
+      "backgroundColor": "#fff"
     }
   },
   "ignite": {

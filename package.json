@@ -47,6 +47,7 @@
     "expo-splash-screen": "~0.29.10",
     "expo-status-bar": "~2.0.0",
     "expo-system-ui": "~4.0.3",
+    "firebase": "^11.8.1",
     "i18next": "^23.14.0",
     "intl-pluralrules": "^2.0.1",
     "mobx": "6.10.2",
