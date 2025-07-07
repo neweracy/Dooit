@@ -1,13 +1,19 @@
 # Dooit - Modern To-Do List App
 
-![Dooit Logo](./assets/images/app-icon-all.png)
+<div align="center">
+
+![Dooit Logo](./assets/images/app-icon-all.png){width=200}
+
+</div>
 
 A powerful and user-friendly to-do list application built with React Native and Parse Server. Dooit helps you stay organized and productive with its intuitive interface and robust features.
 
 ## 🚀 Features
 
 ### Core Features
+
 - 📝 Task Management
+
   - Create, edit, and delete tasks
   - Mark tasks as complete/incomplete
   - Add task descriptions and due dates
@@ -19,12 +25,15 @@ A powerful and user-friendly to-do list application built with React Native and 
   - Secure task storage
 
 ### Advanced Features
+
 - ⚡ Real-time Updates
+
   - Automatic task list refresh
   - Instant task changes
   - Cross-device sync
 
 - 📅 Calendar Integration
+
   - View tasks by date
   - Set task reminders
   - Monthly/weekly views
@@ -38,6 +47,7 @@ A powerful and user-friendly to-do list application built with React Native and 
 ## 🛠 Tech Stack
 
 - **Frontend**
+
   - React Native with Ignite
   - Expo SDK
   - React Navigation
@@ -51,6 +61,7 @@ A powerful and user-friendly to-do list application built with React Native and 
 ## 📱 Getting Started
 
 ### Prerequisites
+
 - Node.js (v14 or higher)
 - Expo CLI
 - Git
@@ -59,21 +70,25 @@ A powerful and user-friendly to-do list application built with React Native and 
 ### Installation
 
 1. Clone the repository
+
 ```bash
 git clone [repository-url]
 cd dooit
 ```
 
 2. Install dependencies
+
 ```bash
 yarn install
 ```
 
 3. Configure Parse Server
+
 - Set up your Parse Server instance
 - Update environment variables in `.env` file
 
 4. Start the development server
+
 ```bash
 yarn start
 ```
@@ -81,6 +96,7 @@ yarn start
 ## 📱 Running the App
 
 ### Development
+
 ```bash
 # Start development server
 yarn start
@@ -93,6 +109,7 @@ yarn android
 ```
 
 ### Production Build
+
 ```bash
 # Build for iOS simulator
 yarn build:ios:sim
@@ -130,12 +147,10 @@ assets
 ### Using Assets
 
 ```typescript
-import { Image } from 'react-native';
+import { Image } from "react-native";
 
 const MyComponent = () => {
-  return (
-    <Image source={require('../assets/images/my_image.png')} />
-  );
+  return <Image source={require("../assets/images/my_image.png")} />;
 };
 ```
 
