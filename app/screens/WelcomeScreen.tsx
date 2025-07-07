@@ -1,5 +1,5 @@
 import { observer } from "mobx-react-lite"
-import { FC } from "react"
+import { FC, useEffect } from "react"
 import { Image, ImageStyle, TextStyle, View, ViewStyle } from "react-native"
 import { Button, Text, Screen } from "@/components"
 import { isRTL } from "@/i18n"
@@ -16,7 +16,10 @@ const welcomeFace = require("../../assets/images/welcome-face.png")
 interface WelcomeScreenProps extends AppStackScreenProps<"Welcome"> {}
 
 export const WelcomeScreen: FC<WelcomeScreenProps> = observer(function WelcomeScreen(_props) {
-  const { themed, theme } = useAppTheme()
+  const { themed, theme, setThemeContextOverride } = useAppTheme()
+  useEffect(() => {
+    setThemeContextOverride("light")
+  }, [setThemeContextOverride])
 
   const { navigation } = _props
   const {
@@ -24,13 +27,14 @@ export const WelcomeScreen: FC<WelcomeScreenProps> = observer(function WelcomeSc
   } = useStores()
 
   function goNext() {
-    navigation.navigate("Demo", { screen: "DemoShowroom", params: {} })
+    navigation.navigate("ChooseAuth")
   }
 
   useHeader(
     {
-      rightTx: "common:logOut",
+      
       onRightPress: logout,
+      
     },
     [logout],
   )

@@ -13,7 +13,7 @@ import { useStores } from "../models"
 import { DemoNavigator, DemoTabParamList } from "./DemoNavigator"
 import { navigationRef, useBackButtonHandler } from "./navigationUtilities"
 import { useAppTheme, useThemeProvider } from "@/utils/useAppTheme"
-import { ComponentProps } from "react"
+import { ComponentProps, useEffect } from "react"
 
 /**
  * This type allows TypeScript to know what routes are defined in this navigator
@@ -33,7 +33,8 @@ export type AppStackParamList = {
   Login: undefined
   Demo: NavigatorScreenParams<DemoTabParamList>
   // 🔥 Your screens go here
-  // IGNITE_GENERATOR_ANCHOR_APP_STACK_PARAM_LIST
+  ChooseAuth: undefined
+	// IGNITE_GENERATOR_ANCHOR_APP_STACK_PARAM_LIST
 }
 
 /**
@@ -68,22 +69,23 @@ const AppStack = observer(function AppStack() {
           backgroundColor: colors.background,
         },
       }}
-      initialRouteName={isAuthenticated ? "Welcome" : "Login"}
+      initialRouteName={isAuthenticated ? "Demo" : "Welcome"}
     >
       {isAuthenticated ? (
         <>
-          <Stack.Screen name="Welcome" component={Screens.WelcomeScreen} />
 
           <Stack.Screen name="Demo" component={DemoNavigator} />
         </>
       ) : (
         <>
+          <Stack.Screen name="Welcome" component={Screens.WelcomeScreen} />
           <Stack.Screen name="Login" component={Screens.LoginScreen} />
+          <Stack.Screen name="ChooseAuth" component={Screens.ChooseAuthScreen} />
         </>
       )}
 
       {/** 🔥 Your screens go here */}
-      {/* IGNITE_GENERATOR_ANCHOR_APP_STACK_SCREENS */}
+			{/* IGNITE_GENERATOR_ANCHOR_APP_STACK_SCREENS */}
     </Stack.Navigator>
   )
 })
@@ -94,6 +96,9 @@ export interface NavigationProps
 export const AppNavigator = observer(function AppNavigator(props: NavigationProps) {
   const { themeScheme, navigationTheme, setThemeContextOverride, ThemeProvider } =
     useThemeProvider()
+  useEffect(() => {
+    setThemeContextOverride("light")
+  }, [setThemeContextOverride])
 
      const exitRoutes = ["welcome","Demo"] // Add any other routes that should exit the app here
   // This hook will handle the back button on Android and exit the app if the user is on an exit route

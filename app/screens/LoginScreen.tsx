@@ -14,10 +14,15 @@ import { useStores } from "../models"
 import { AppStackScreenProps } from "../navigators"
 import type { ThemedStyle } from "@/theme"
 import { useAppTheme } from "@/utils/useAppTheme"
+import { useHeader } from "@/utils/useHeader"
+import { useNavigation } from "@react-navigation/native"
+import { NativeStackNavigationProp } from "@react-navigation/native-stack"
+import { AppStackParamList } from "../navigators"
 
 interface LoginScreenProps extends AppStackScreenProps<"Login"> {}
 
 export const LoginScreen: FC<LoginScreenProps> = observer(function LoginScreen(_props) {
+  const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>()
   const authPasswordInput = useRef<TextInput>(null)
 
   const [authPassword, setAuthPassword] = useState("")
@@ -27,6 +32,15 @@ export const LoginScreen: FC<LoginScreenProps> = observer(function LoginScreen(_
   const {
     authenticationStore: { authEmail, setAuthEmail, setAuthToken, validationError },
   } = useStores()
+
+
+  useHeader(
+    {
+      leftIcon: "back",
+      onLeftPress: () => _props.navigation.goBack(),
+    },
+    [_props.navigation]
+  )
 
   const {
     themed,
@@ -118,7 +132,12 @@ export const LoginScreen: FC<LoginScreenProps> = observer(function LoginScreen(_
         secureTextEntry={isAuthPasswordHidden}
         labelTx="loginScreen:passwordFieldLabel"
         placeholderTx="loginScreen:passwordFieldPlaceholder"
-        onSubmitEditing={login}
+        onSubmitEditing={async () => {
+          if (!authEmail || !authPassword) return
+          await setAuthToken(authEmail, authPassword)
+          setIsSubmitted(true)
+          navigation.navigate("Demo", { screen: "DemoCommunity" })
+        }}
         RightAccessory={PasswordRightAccessory}
       />
 
