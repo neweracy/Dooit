@@ -13,6 +13,9 @@ import { useAppTheme } from "@/utils/useAppTheme"
 const welcomeLogo = require("../../assets/images/logo.png")
 const welcomeFace = require("../../assets/images/welcome-face.png")
 
+const logo = require("../../assets/images/app-icon-android-adaptive-foreground.png");
+
+
 interface WelcomeScreenProps extends AppStackScreenProps<"Welcome"> {}
 
 export const WelcomeScreen: FC<WelcomeScreenProps> = observer(function WelcomeScreen(_props) {
@@ -44,7 +47,7 @@ export const WelcomeScreen: FC<WelcomeScreenProps> = observer(function WelcomeSc
   return (
     <Screen preset="fixed" contentContainerStyle={$styles.flex1}>
       <View style={themed($topContainer)}>
-        <Image style={themed($welcomeLogo)} source={welcomeLogo} resizeMode="contain" />
+        <Image style={themed($welcomeLogo)} source={logo} resizeMode="contain" />
         <Text
           testID="welcome-heading"
           style={themed($welcomeHeading)}
@@ -52,12 +55,7 @@ export const WelcomeScreen: FC<WelcomeScreenProps> = observer(function WelcomeSc
           preset="heading"
         />
         <Text tx="welcomeScreen:exciting" preset="subheading" />
-        <Image
-          style={$welcomeFace}
-          source={welcomeFace}
-          resizeMode="contain"
-          tintColor={theme.colors.palette.neutral900}
-        />
+       
       </View>
 
       <View style={themed([$bottomContainer, $bottomContainerInsets])}>
@@ -94,9 +92,9 @@ const $bottomContainer: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
 })
 
 const $welcomeLogo: ThemedStyle<ImageStyle> = ({ spacing }) => ({
-  height: 88,
+  height: 200,
   width: "100%",
-  marginBottom: spacing.xxl,
+  marginBottom: spacing.xl,
 })
 
 const $welcomeFace: ImageStyle = {
