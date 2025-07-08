@@ -9,8 +9,8 @@ const en = {
   },
   welcomeScreen: {
     postscript:
-      "psst  — This probably isn't what your app looks like. (Unless your designer handed you these screens, and in that case, ship it!)",
-    readyForLaunch: "Your app, almost ready for launch!",
+      "Dooit helps you stay organized and productive with its intuitive interface and robust features.",
+    readyForLaunch: "Let's Start Something fun",
     exciting: "(ohh, this is exciting!)",
     letsGo: "Let's go!",
   },
@@ -41,6 +41,7 @@ const en = {
     emailFieldPlaceholder: "Enter your email address",
     passwordFieldPlaceholder: "Super secret password here",
     tapToLogIn: "Tap to log in!",
+    toRegister: "Don't have an account" ,
     hint: "Hint: you can use any email address and your favorite password :)",
   },
   demoNavigator: {
@@ -120,6 +121,18 @@ const en = {
       content:
         "No favorites have been added yet. Tap the heart on an episode to add it to your favorites!",
     },
+  },
+
+  signUpScreen: {
+    signUp: "Create Account",
+    enterDetails:
+      "Fill in your details below to access top secret content. It’s not Area 51... but close enough.",
+    emailFieldLabel: "Email",
+    passwordFieldLabel: "Password",
+    emailFieldPlaceholder: "Enter your email address",
+    passwordFieldPlaceholder: "Choose a strong password",
+    ToLogIn: "Already have an account? Log in here!",
+    hint: "Hint: any valid email works. Make your password memorable!",
   },
 
   ...demoEn,

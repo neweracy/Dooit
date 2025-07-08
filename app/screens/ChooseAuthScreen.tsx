@@ -19,6 +19,11 @@ export const ChooseAuthScreen: FC<AppStackScreenProps<"ChooseAuth">> = observer(
     const { authenticationStore } = useStores();
     const navigation = useNavigation();
 
+
+    const googleSignIn = () => {
+
+    }
+
     useHeader(
       {
         leftIcon: "back",
@@ -52,14 +57,15 @@ export const ChooseAuthScreen: FC<AppStackScreenProps<"ChooseAuth">> = observer(
             // style={}
             text="Continue with Email"
             onPress={() => navigation.navigate("Login")}
-            preset="default"
+            preset="reversed"
           />
           <Button
             // style={}
-            text="Google"
+            text="Sign in with Google"
+            style={{gap: 8}}
             onPress={() => navigation.navigate("Login")}
-            preset="default"
-            LeftAccessory={(props) => <Icon icon="bell" {...props} />}
+            preset="reversed"
+            LeftAccessory={(props) => <Icon icon="google" {...props} size={20} color="white" />}
             
           />
         </View>
