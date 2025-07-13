@@ -50,7 +50,7 @@ const rnrImages = [rnrImage1, rnrImage2, rnrImage3]
 
 export const DemoPodcastListScreen: FC<DemoTabScreenProps<"DemoPodcastList">> = observer(
   function DemoPodcastListScreen(_props) {
-    const { episodeStore } = useStores()
+    const { episodeStore,taskStore } = useStores()
     const { themed } = useAppTheme()
 
     const [refreshing, setRefreshing] = useState(false)

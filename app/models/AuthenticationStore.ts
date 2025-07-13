@@ -1,12 +1,30 @@
 import { Instance, SnapshotOut, types, flow } from "mobx-state-tree"
+import type { User } from "parse"
 import { withSetPropAction } from "./helpers/withSetPropAction"
-import Parse, { User } from "parse"
+import Parse from "@/lib/Parse/parse"
 
 // Extend the Parse.User type with our custom methods
 export interface IAppUser extends Parse.User {
   getEmail(): string
   getUsername(): string
   getSessionToken(): string
+}
+
+import type { TokenResponse } from "expo-auth-session"
+
+// Google authentication response type
+export interface GoogleAuthResponse {
+  type: "success" | "dismiss" | "cancel" | "opened" | "locked" | "error"
+  errorCode?: string | null
+  error?: any
+  params?: Record<string, string>
+  authentication?:
+    | (TokenResponse & {
+        idToken?: string
+        accessToken?: string
+      })
+    | null
+  url?: string
 }
 
 // Helper function to check if Parse server is running
@@ -166,6 +184,121 @@ export const AuthenticationStoreModel = types
         }
 
         console.error("Signup error:", errorMessage)
+        store.error = errorMessage
+        return { success: false, error: errorMessage }
+      } finally {
+        store.isLoading = false
+      }
+    }),
+    googleSignIn: flow(function* googleSignIn(
+      response: GoogleAuthResponse,
+    ): Generator<Promise<any>, { success: boolean; error?: string; user?: User }, any> {
+      store.isLoading = true
+      store.error = ""
+
+      try {
+        // Early return if response is not successful
+        if (response?.type !== "success") {
+          console.log("Google authentication was not successful")
+          store.error = "Google authentication was cancelled or failed"
+          return { success: false, error: "Google authentication was cancelled or failed" }
+        }
+
+        // Handle case when authentication is null or missing required tokens
+        if (!response.authentication?.idToken || !response.authentication?.accessToken) {
+          console.error("Missing required authentication data in response", response.authentication)
+          store.error = "Incomplete authentication data received from Google"
+          return {
+            success: false,
+            error: "Incomplete authentication data. Please try signing in again.",
+          }
+        }
+
+        // Check if Parse server is running first
+        console.log("Checking Parse server connection...")
+        const isServerRunning: boolean = yield checkParseServerConnection()
+
+        if (!isServerRunning) {
+          const errorMessage = "Parse server is not running. Please check your server connection."
+          console.error("Server check failed:", errorMessage)
+          store.error = errorMessage
+          return { success: false, error: errorMessage }
+        }
+
+        console.log("Parse server is running. Proceeding with Google sign-in...")
+
+        const { idToken, accessToken } = response.authentication || {}
+
+        if (!idToken || !accessToken) {
+          throw new Error("Missing authentication tokens")
+        }
+
+        // Fetch Google user profile
+        const profileResponse: Response = yield fetch(
+          "https://www.googleapis.com/oauth2/v3/userinfo",
+          {
+            headers: { Authorization: `Bearer ${accessToken}` },
+          },
+        )
+
+        if (!profileResponse.ok) {
+          throw new Error(`Failed to fetch user profile: ${profileResponse.status}`)
+        }
+
+        const profile = yield Promise.resolve(profileResponse.json())
+
+        // Validate required profile data
+        const { sub: googleUserId, email, name, picture } = profile
+
+        if (!googleUserId) {
+          throw new Error("Google ID (sub) not found in user profile")
+        }
+
+        if (!email || !name) {
+          throw new Error("Required user information missing from Google profile")
+        }
+
+        // Prepare Parse authentication data
+        const authData = {
+          id: googleUserId,
+          id_token: idToken,
+          access_token: accessToken,
+        }
+
+        // Authenticate with Parse
+        const user: Parse.User = yield Promise.resolve(Parse.User.logInWith("google", { authData }))
+
+        // Update store with authenticated user
+        store.currentUser = user
+        store.authToken = user.getSessionToken()
+        store.error = ""
+
+        console.log("Google login successful:", {
+          userId: googleUserId,
+          email,
+          username: name,
+          hasPicture: Boolean(picture),
+        })
+
+        return { success: true, user }
+      } catch (error: unknown) {
+        let errorMessage = "Failed to sign in with Google"
+
+        // Handle specific Parse server connection errors
+        if (error instanceof Error) {
+          if (
+            error.message.includes("XMLHttpRequest") ||
+            error.message.includes("Network Error") ||
+            error.message.includes("Failed to fetch") ||
+            error.message.includes("ECONNREFUSED")
+          ) {
+            errorMessage = "Cannot connect to server. Please check if the Parse server is running."
+          } else {
+            errorMessage = error.message
+          }
+        }
+
+        console.error("Google sign-in error:", errorMessage)
         store.error = errorMessage
         return { success: false, error: errorMessage }
       } finally {

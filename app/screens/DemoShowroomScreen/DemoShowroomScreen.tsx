@@ -14,7 +14,7 @@ import { DrawerIconButton } from "./DrawerIconButton"
 import SectionListWithKeyboardAwareScrollView from "./SectionListWithKeyboardAwareScrollView"
 import { useAppTheme } from "@/utils/useAppTheme"
 
-const logo = require("../../../assets/images/logo.png")
+const logo = require("../../../assets/images/app-icon-android-adaptive-foreground.png");
 
 export interface Demo {
   name: string
@@ -260,8 +260,8 @@ const $heading: ThemedStyle<ViewStyle> = ({ spacing }) => ({
 })
 
 const $logoImage: ImageStyle = {
-  height: 42,
-  width: 77,
+  height: 80,
+  width: 80,
 }
 
 const $logoContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
