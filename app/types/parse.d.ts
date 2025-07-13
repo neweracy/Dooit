@@ -99,6 +99,9 @@ declare module 'parse' {
   }
 
   export class User extends ParseObject {
+    static logInWith(arg0: string, arg1: { authData: { id: any; id_token: any; access_token: any; }; }) {
+      throw new Error("Method not implemented.");
+    }
     static current(): User | null;
     static currentAsync(): Promise<User | null>;
     static signUp(username: string, password: string, attrs: any, options?: any): Promise<User>;

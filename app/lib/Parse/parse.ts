@@ -1,6 +1,6 @@
 import { initializeParse } from "@parse/react-native"
 import AsyncStorage from "@react-native-async-storage/async-storage"
-import Parse from "parse"
+import Parse from "parse/react-native"
 
 // Parse server details
 const PARSE_SERVER_URL = process.env.EXPO_PUBLIC_SERVER_URL
@@ -18,18 +18,17 @@ initializeParse(
   PARSE_JS_KEY
 )
 
-Parse.enableLocalDatastore()
-
-
-Parse.setAsyncStorage(AsyncStorage)
-
-// Configure Parse
+// Configure Parse only once
 if (!Parse.applicationId) {
   // @ts-ignore - serverURL is writeable at runtime
   Parse.serverURL = PARSE_SERVER_URL
   Parse.initialize(PARSE_APP_ID, PARSE_JS_KEY)
-  Parse.enableLocalDatastore()
+  
+  // Set AsyncStorage first
   Parse.setAsyncStorage(AsyncStorage)
+  
+  // Then enable local datastore
+  Parse.enableLocalDatastore()
 }
 
 // Type-safe wrapper functions
@@ -41,18 +40,6 @@ export const getCurrentUser = async (): Promise<Parse.User | null> => {
     return null
   }
 }
-
-// export const checkUserExists = async (username: string): Promise<boolean> => {
-//   try {
-//     const query = new Parse.Query('_User')
-//     query.equalTo("username", username)
-//     const count = await query.count()
-//     return count > 0
-//   } catch (error) {
-//     console.error("Error checking if user exists:", error)
-//     return false
-//   }
-// }
 
 export const fetchAllUsers = async (): Promise<Parse.User[]> => {
   try {

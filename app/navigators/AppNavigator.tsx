@@ -74,7 +74,7 @@ const AppStack = observer(function AppStack() {
     checkStatus();
     
     // Set up interval for periodic checks (every 30 seconds)
-    const intervalId = setInterval(checkStatus, 60000);
+    const intervalId = setInterval(checkStatus, 30000);
     
     // Clean up the interval when the component unmounts or when checkServerStatus changes
     return () => clearInterval(intervalId);
