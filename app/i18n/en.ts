@@ -38,6 +38,8 @@ const en = {
       "Enter your details below to unlock top secret info. You'll never guess what we've got waiting. Or maybe you will; it's not rocket science here.",
     emailFieldLabel: "Email",
     passwordFieldLabel: "Password",
+    passwordFieldLabelConf: "Confirm Password",
+
     emailFieldPlaceholder: "Enter your email address",
     passwordFieldPlaceholder: "Super secret password here",
     tapToLogIn: "Tap to log in!",

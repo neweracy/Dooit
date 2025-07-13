@@ -1,7 +1,7 @@
 import { observer } from "mobx-react-lite";
 import { ComponentType, FC, useEffect, useMemo, useRef, useState } from "react";
 // eslint-disable-next-line no-restricted-imports
-import { TextInput, TextStyle, ViewStyle } from "react-native";
+import { Alert, TextInput, TextStyle, ViewStyle } from "react-native";
 import {
   Button,
   PressableIcon,
@@ -21,6 +21,17 @@ import { AppStackParamList } from "../navigators";
 
 interface LoginScreenProps extends AppStackScreenProps<"Login"> {}
 
+const emailValidator = (email: string): string | undefined => {
+  if (!email.length) return "Please enter a valid email address";
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return "Enter a valid Email";
+  return undefined;
+};
+
+const passwordValidator = (password: string): string | undefined => {
+  if (!password.length) return "Please enter a valid password";
+  return undefined;
+};
+
 export const LoginScreen: FC<LoginScreenProps> = observer(function LoginScreen(
   _props
 ) {
@@ -28,8 +39,9 @@ export const LoginScreen: FC<LoginScreenProps> = observer(function LoginScreen(
     NativeStackNavigationProp<AppStackParamList>
   >();
   const authPasswordInput = useRef<TextInput>(null);
+  const [emailError, setEmailError] = useState<string | undefined>();
+  const [passwordError, setPasswordError] = useState<string | undefined>();
 
-  const [authPassword, setAuthPassword] = useState("");
   const [isAuthPasswordHidden, setIsAuthPasswordHidden] = useState(true);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [attemptsCount, setAttemptsCount] = useState(0);
@@ -37,20 +49,29 @@ export const LoginScreen: FC<LoginScreenProps> = observer(function LoginScreen(
     authenticationStore: {
       authEmail,
       setAuthEmail,
+      authPassword,
+      setAuthPassword,
       setAuthToken,
       validationError,
+      login,
     },
   } = useStores();
 
   const register = () => {
-    navigation.navigate("SignUp")
+    navigation.navigate("SignUp");
+    setAuthEmail("");
+    setAuthPassword("");
   };
 
   useHeader(
     {
       leftIcon: "back",
-      onLeftPress: () => navigation.goBack(),
-      title: "Login"
+      onLeftPress: () => {
+        navigation.goBack();
+        setAuthEmail("");
+        setAuthPassword("");
+      },
+      title: "Log In",
     },
     [navigation]
   );
@@ -60,36 +81,84 @@ export const LoginScreen: FC<LoginScreenProps> = observer(function LoginScreen(
     theme: { colors },
   } = useAppTheme();
 
-  useEffect(() => {
-    // Here is where you could fetch credentials from keychain or storage
-    // and pre-fill the form fields.
-    setAuthEmail("ignite@infinite.red");
-    setAuthPassword("ign1teIsAwes0m3");
+  // const error = isSubmitted ? validationError : "";
+  async function onSubmit() {
+    try {
+      setIsSubmitted(true);
+      setAttemptsCount(attemptsCount + 1);
 
-    // Return a "cleanup" function that React will run when the component unmounts
-    return () => {
-      setAuthPassword("");
-      setAuthEmail("");
-    };
-  }, [setAuthEmail]);
+      setEmailError(undefined);
+      setPasswordError(undefined);
 
-  const error = isSubmitted ? validationError : "";
+      // Validate email
+      const emailValidationError = emailValidator(authEmail);
+      if (emailValidationError) {
+        setEmailError(emailValidationError);
+        return; // Don't throw, just return early
+      }
 
-  function login() {
-    setIsSubmitted(true);
-    setAttemptsCount(attemptsCount + 1);
+      // Validate password
+      const passwordValidationError = passwordValidator(authPassword);
+      if (passwordValidationError) {
+        setPasswordError(passwordValidationError);
+        return; // Don't throw, just return early
+      }
 
-    if (validationError) return;
+      // Early return if validation fails
+      if (validationError) {
+        setIsSubmitted(false);
+        return;
+      }
 
-    // Make a request to your server to get an authentication token.
-    // If successful, reset the fields and set the token.
-    setIsSubmitted(false);
-    setAuthPassword("");
-    setAuthEmail("");
+      console.log("Validation passed, attempting login...");
 
-    // We'll mock this with a fake token.
-    // Passing the current authPassword as the second argument
-    setAuthToken(String(Date.now()), authPassword);
+      // Attempt login
+      const result = await login();
+
+      if (result.success) {
+        console.log("Login successful");
+
+        // Reset form fields on success
+        setIsSubmitted(false);
+        setAuthPassword("");
+        setAuthEmail("");
+
+        // Navigate to the next screen
+        navigation.navigate("Demo", { screen: "DemoCommunity" });
+      } else {
+        // Login failed - keep form populated for retry
+        setIsSubmitted(false);
+
+        const errorMessage = result.error || "Login failed. Please try again.";
+        console.error("Login failed:", errorMessage);
+
+        // Optional: Show alert for login failure
+        Alert.alert("Login Failed", errorMessage, [
+          {
+            text: "OK",
+            onPress: () => console.log("Login error acknowledged"),
+          },
+        ]);
+      }
+    } catch (error) {
+      // Handle unexpected errors
+      setIsSubmitted(false);
+
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "An unexpected error occurred during login";
+
+      console.error("Login error:", errorMessage);
+
+      // Optional: Show alert for unexpected errors
+      Alert.alert("Login Error", errorMessage, [
+        {
+          text: "OK",
+          onPress: () => console.log("Unexpected error acknowledged"),
+        },
+      ]);
+    }
   }
 
   const PasswordRightAccessory: ComponentType<TextFieldAccessoryProps> = useMemo(
@@ -150,8 +219,8 @@ export const LoginScreen: FC<LoginScreenProps> = observer(function LoginScreen(
         keyboardType="email-address"
         labelTx="loginScreen:emailFieldLabel"
         placeholderTx="loginScreen:emailFieldPlaceholder"
-        helper={error}
-        status={error ? "error" : undefined}
+        helper={emailError}
+        status={emailError ? "error" : undefined}
         onSubmitEditing={() => authPasswordInput.current?.focus()}
       />
 
@@ -166,6 +235,8 @@ export const LoginScreen: FC<LoginScreenProps> = observer(function LoginScreen(
         secureTextEntry={isAuthPasswordHidden}
         labelTx="loginScreen:passwordFieldLabel"
         placeholderTx="loginScreen:passwordFieldPlaceholder"
+        helper={passwordError}
+        status={passwordError ? "error" : undefined}
         onSubmitEditing={async () => {
           if (!authEmail || !authPassword) return;
           await setAuthToken(authEmail, authPassword);
@@ -180,7 +251,7 @@ export const LoginScreen: FC<LoginScreenProps> = observer(function LoginScreen(
         tx="loginScreen:tapToLogIn"
         style={themed($tapButton)}
         preset="reversed"
-        onPress={login}
+        onPress={onSubmit}
       />
     </Screen>
   );
@@ -215,7 +286,7 @@ const $tapButton: ThemedStyle<ViewStyle> = ({ spacing }) => ({
 const $loginText: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
   // color: colors.tint,
   // marginBottom: spacing.md,
-  textAlign: "center"
+  textAlign: "center",
 });
 
 const $loginLink: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
