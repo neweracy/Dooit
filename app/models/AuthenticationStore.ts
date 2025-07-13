@@ -9,6 +9,23 @@ export interface IAppUser extends Parse.User {
   getSessionToken(): string
 }
 
+// Helper function to check if Parse server is running
+const checkParseServerConnection = async (): Promise<boolean> => {
+  try {
+    // Try to make a simple health check query
+    const TestObject = Parse.Object.extend("TestConnection")
+    const query = new Parse.Query(TestObject)
+    query.limit(1)
+
+    // This will throw an error if server is not reachable
+    await query.find()
+    return true
+  } catch (error) {
+    console.error("Parse server connection check failed:", error)
+    return false
+  }
+}
+
 export const AuthenticationStoreModel = types
   .model("AuthenticationStore")
   .props({
@@ -17,7 +34,7 @@ export const AuthenticationStoreModel = types
     authPassword: "",
     isLoading: false,
     error: "",
-    currentUser: types.maybe(types.frozen<Parse.User>())
+    currentUser: types.maybe(types.frozen<Parse.User>()),
   })
   .views((store) => ({
     get isAuthenticated() {
@@ -58,14 +75,43 @@ export const AuthenticationStoreModel = types
     login: flow(function* login() {
       store.isLoading = true
       store.error = ""
+
       try {
+        // Check if Parse server is running first
+        console.log("Checking Parse server connection...")
+        const isServerRunning: boolean = yield checkParseServerConnection()
+
+        if (!isServerRunning) {
+          const errorMessage = "Parse server is not running. Please check your server connection."
+          console.error("Server check failed:", errorMessage)
+          store.error = errorMessage
+          return { success: false, error: errorMessage }
+        }
+
+        console.log("Parse server is running. Proceeding with login...")
+
         const user: Parse.User = yield Parse.User.logIn(store.authEmail, store.authPassword)
         store.currentUser = user
         store.authToken = user.getSessionToken()
         store.error = ""
         return { success: true }
       } catch (error: unknown) {
-        const errorMessage = error instanceof Error ? error.message : "Failed to log in"
+        let errorMessage = "Failed to log in"
+
+        // Handle specific Parse server connection errors
+        if (error instanceof Error) {
+          if (
+            error.message.includes("XMLHttpRequest") ||
+            error.message.includes("Network Error") ||
+            error.message.includes("Failed to fetch") ||
+            error.message.includes("ECONNREFUSED")
+          ) {
+            errorMessage = "Cannot connect to server. Please check if the Parse server is running."
+          } else {
+            errorMessage = error.message
+          }
+        }
+
         console.error("Login error:", errorMessage)
         store.error = errorMessage
         return { success: false, error: errorMessage }
@@ -76,19 +122,49 @@ export const AuthenticationStoreModel = types
     signUp: flow(function* signUp(username: string) {
       store.isLoading = true
       store.error = ""
+
       try {
+        // Check if Parse server is running first
+        console.log("Checking Parse server connection...")
+        const isServerRunning: boolean = yield checkParseServerConnection()
+
+        if (!isServerRunning) {
+          const errorMessage = "Parse server is not running. Please check your server connection."
+          console.error("Server check failed:", errorMessage)
+          store.error = errorMessage
+          return { success: false, error: errorMessage, throwError: true }
+        }
+
+        console.log("Parse server is running. Proceeding with signup...")
+
         const user = new Parse.User()
         user.set("username", username)
         user.set("email", store.authEmail)
         user.set("password", store.authPassword)
-        
+
         const newUser: Parse.User = yield user.signUp()
         store.currentUser = newUser
         store.authToken = newUser.getSessionToken()
         store.error = ""
+        console.log("Signup successful!")
         return { success: true }
       } catch (error: unknown) {
-        const errorMessage = error instanceof Error ? error.message : "Failed to sign up"
+        let errorMessage = "Failed to sign up"
+
+        // Handle specific Parse server connection errors
+        if (error instanceof Error) {
+          if (
+            error.message.includes("XMLHttpRequest") ||
+            error.message.includes("Network Error") ||
+            error.message.includes("Failed to fetch") ||
+            error.message.includes("ECONNREFUSED")
+          ) {
+            errorMessage = "Cannot connect to server. Please check if the Parse server is running."
+          } else {
+            errorMessage = error.message
+          }
+        }
+
         console.error("Signup error:", errorMessage)
         store.error = errorMessage
         return { success: false, error: errorMessage }
@@ -98,10 +174,19 @@ export const AuthenticationStoreModel = types
     }),
     logout: flow(function* logout() {
       try {
-        yield Parse.User.logOut()
+        // Clear current user and token from store first
         store.currentUser = undefined
         store.authToken = undefined
         store.resetAuthState()
+
+        // Then attempt Parse logout (this might fail in React Native)
+        try {
+          yield Parse.User.logOut()
+        } catch (logoutError) {
+          // Log the error but don't fail the logout process
+          console.warn("Parse.User.logOut() failed (this is normal in React Native):", logoutError)
+        }
+
         return { success: true }
       } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : "Failed to log out"
@@ -124,7 +209,16 @@ export const AuthenticationStoreModel = types
         console.error("Error checking current user:", errorMessage)
         return false
       }
-    })
+    }),
+    // Optional: Add a separate method to check server status
+    checkServerStatus: flow(function* checkServerStatus() {
+      try {
+        const isRunning: boolean = yield checkParseServerConnection()
+        return { isRunning, message: isRunning ? "Server is running" : "Server is not accessible" }
+      } catch (error) {
+        return { isRunning: false, message: "Failed to check server status" }
+      }
+    }),
   }))
   .actions(withSetPropAction)
 

@@ -4,6 +4,7 @@ export type RootStackParamList = {
   Welcome: undefined;
   ChooseAuth: undefined;
   Login: undefined;
+  SignUp: undefined;
   Demo: undefined;
   // Add other screens here as needed
 };
