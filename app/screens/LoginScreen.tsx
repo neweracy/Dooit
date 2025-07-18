@@ -6,6 +6,7 @@ import {
   Button,
   PressableIcon,
   Screen,
+  showQueuedAlert,
   Text,
   TextField,
   TextFieldAccessoryProps,
@@ -133,12 +134,17 @@ export const LoginScreen: FC<LoginScreenProps> = observer(function LoginScreen(
         console.error("Login failed:", errorMessage);
 
         // Optional: Show alert for login failure
-        Alert.alert("Login Failed", errorMessage, [
-          {
-            text: "OK",
-            onPress: () => console.log("Login error acknowledged"),
-          },
-        ]);
+        showQueuedAlert({
+          title: "Login Failed",
+          message: errorMessage,
+          buttons: [
+            {
+              text: "continue",
+              onPress: () => console.log("Login error acknowledged"),
+              style: "destructive",
+            },
+          ],
+        });
       }
     } catch (error) {
       // Handle unexpected errors

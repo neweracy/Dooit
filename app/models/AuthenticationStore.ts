@@ -53,6 +53,7 @@ export const AuthenticationStoreModel = types
     isLoading: false,
     error: "",
     currentUser: types.maybe(types.frozen<Parse.User>()),
+    username: types.maybe(types.string),
   })
   .views((store) => ({
     get isAuthenticated() {

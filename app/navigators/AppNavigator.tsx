@@ -15,6 +15,7 @@ import { navigationRef, useBackButtonHandler } from "./navigationUtilities"
 import { useAppTheme, useThemeProvider } from "@/utils/useAppTheme"
 import { ComponentProps, useEffect } from "react"
 import { Alert } from "react-native"
+import { AlertTongle, showQueuedAlert } from "@/components"
 
 /**
  * This type allows TypeScript to know what routes are defined in this navigator
@@ -66,7 +67,11 @@ const AppStack = observer(function AppStack() {
     const checkStatus = async () => {
       const status = await checkServerStatus();
       if (!status.isRunning) {
-        Alert.alert("No connection", status.message);
+        showQueuedAlert({
+          title: "No connection",
+          message: status.message,
+       
+        })
       }
     };
     
