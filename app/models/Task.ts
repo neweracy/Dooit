@@ -2,6 +2,12 @@ import { Instance, SnapshotOut, types } from "mobx-state-tree"
 import { withSetPropAction } from "./helpers/withSetPropAction"
 import Parse from "@/lib/Parse/parse"
 
+export const PeriodType = types.union(
+  types.literal("morning"),
+  types.literal("afternoon"),
+  types.literal("evening")
+)
+
 export const TaskModel = types
   .model("Task")
   .props({
@@ -9,9 +15,13 @@ export const TaskModel = types
     title: "",
     description: "",
     isCompleted: false,
+    startDate: types.maybe(types.string),
     dueDate: types.maybe(types.string),
     createdAt: types.maybe(types.string),
     updatedAt: types.maybe(types.string),
+    taskTime: types.maybe(types.string),
+    period: types.maybe(PeriodType),
+    reminderEnabled: types.maybe(types.boolean),
   })
   .actions(withSetPropAction)
   .actions((store) => ({

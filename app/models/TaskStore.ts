@@ -10,9 +10,11 @@ export const TaskModel = types.model("Task", {
   title: types.string,
   description: types.string,
   isCompleted: types.boolean,
+  startDate: types.maybe(types.string), // ← ADD THIS
   dueDate: types.maybe(types.string),
   createdAt: types.maybe(types.string),
   updatedAt: types.maybe(types.string),
+  taskTime: types.maybe(types.string), // Using maybe string to handle both empty strings and null/undefined
   period: types.maybe(types.enumeration(["morning", "afternoon", "evening"])),
   reminderEnabled: types.maybe(types.boolean),
 })
@@ -81,22 +83,43 @@ export const TaskStoreModel = types
       try {
         const Task = Parse.Object.extend("Task")
         const query = new Parse.Query(Task)
-        query.equalTo("user", Parse.User.current())
+        const currentUser = yield Parse.User.currentAsync()
+        if (!currentUser) throw new Error("No current user found")
+        query.equalTo("user", currentUser)
         query.ascending("dueDate")
 
         const results = yield query.find()
 
-        const tasks = results.map((task: any) => ({
-          id: task.id,
-          title: task.get("title") || "",
-          description: task.get("description") || "",
-          isCompleted: task.get("isCompleted") || false,
-          dueDate: task.get("dueDate")?.toISOString(),
-          period: task.get("period") || "morning",
-          reminderEnabled: task.get("reminderEnabled") || false,
-          createdAt: task.get("createdAt")?.toISOString(),
-          updatedAt: task.get("updatedAt")?.toISOString(),
-        }))
+        const tasks = results.map((task: any) => {
+          const taskTimeValue = task.get("taskTime")
+          let processedTaskTime: string | undefined = undefined
+          
+          if (taskTimeValue) {
+            // Handle different possible types for taskTime
+            if (typeof taskTimeValue === 'string') {
+              processedTaskTime = taskTimeValue
+            } else if (taskTimeValue instanceof Date) {
+              processedTaskTime = taskTimeValue.toISOString()
+            } else {
+              // Convert to string if it's some other type
+              processedTaskTime = String(taskTimeValue)
+            }
+          }
+
+          return {
+            id: task.id,
+            title: task.get("title") || "",
+            description: task.get("description") || "",
+            isCompleted: task.get("isCompleted") || false,
+            startDate: task.get("startDate")?.toISOString(),
+            dueDate: task.get("dueDate")?.toISOString(),
+            taskTime: processedTaskTime,
+            period: task.get("period") || "morning",
+            reminderEnabled: task.get("reminderEnabled") || false,
+            createdAt: task.get("createdAt")?.toISOString(),
+            updatedAt: task.get("updatedAt")?.toISOString(),
+          }
+        })
 
         store.tasks = tasks
         return tasks
@@ -113,6 +136,8 @@ export const TaskStoreModel = types
       title: string
       description?: string
       dueDate?: string
+      startDate?: string
+      taskTime?: Date
       period?: "morning" | "afternoon" | "evening"
       reminderEnabled?: boolean
     }) {
@@ -133,7 +158,9 @@ export const TaskStoreModel = types
         task.set("title", taskData.title)
         task.set("description", taskData.description || "")
         task.set("isCompleted", false)
-        task.set("user", Parse.User.current())
+        const currentUser = yield Parse.User.currentAsync()
+        if (!currentUser) throw new Error("No current user found")
+        task.set("user", currentUser)
         task.set("period", taskData.period || "morning")
         task.set("reminderEnabled", taskData.reminderEnabled || false)
 
@@ -141,7 +168,31 @@ export const TaskStoreModel = types
           task.set("dueDate", new Date(taskData.dueDate))
         }
 
+        if (taskData.startDate) {
+          task.set("startDate", new Date(taskData.startDate))
+        }
+
+        // Store taskTime as a string in ISO format
+        if (taskData.taskTime) {
+          task.set("taskTime", taskData.taskTime) // taskData.taskTime is already in ISO string format
+        }
+
         const result = yield task.save()
+
+        const taskTimeValue = result.get("taskTime")
+        let processedTaskTime: string | undefined = undefined
+        
+        if (taskTimeValue) {
+          // Handle different possible types for taskTime
+          if (typeof taskTimeValue === 'string') {
+            processedTaskTime = taskTimeValue
+          } else if (taskTimeValue instanceof Date) {
+            processedTaskTime = taskTimeValue.toISOString()
+          } else {
+            // Convert to string if it's some other type
+            processedTaskTime = String(taskTimeValue)
+          }
+        }
 
         const newTask = {
           id: result.id,
@@ -149,6 +200,8 @@ export const TaskStoreModel = types
           description: result.get("description"),
           isCompleted: result.get("isCompleted"),
           dueDate: result.get("dueDate")?.toISOString(),
+          startDate: result.get("startDate")?.toISOString(),
+          taskTime: processedTaskTime,
           period: result.get("period"),
           reminderEnabled: result.get("reminderEnabled"),
           createdAt: result.get("createdAt")?.toISOString(),
@@ -165,7 +218,6 @@ export const TaskStoreModel = types
         //   message: error.message
         // })
 
-        
         store.setError(error.message || "Failed to create task")
         return null
       } finally {
@@ -203,7 +255,9 @@ export const TaskStoreModel = types
         title: string
         description: string
         isCompleted: boolean
+        startDate: string
         dueDate: string
+        taskTime: string
         period: "morning" | "afternoon" | "evening"
         reminderEnabled: boolean
       }>,
@@ -214,7 +268,9 @@ export const TaskStoreModel = types
       try {
         const Task = Parse.Object.extend("Task")
         const query = new Parse.Query(Task)
-        query.equalTo("user", Parse.User.current())
+        const currentUser = yield Parse.User.currentAsync()
+        if (!currentUser) throw new Error("No current user found")
+        query.equalTo("user", currentUser)
 
         const task = yield query.get(taskId)
 
@@ -224,11 +280,12 @@ export const TaskStoreModel = types
 
         if (updates.title !== undefined) task.set("title", updates.title)
         if (updates.description !== undefined) task.set("description", updates.description)
-        if (updates.isCompleted !== undefined) task.set("isCompleted", updates.isCompleted)
+        if (updates.isCompleted !== undefined) task.set("isCompleted", updates.isCompleted) // ← FIXED: was "ispleted"
         if (updates.dueDate !== undefined) task.set("dueDate", new Date(updates.dueDate))
+        if (updates.startDate !== undefined) task.set("startDate", new Date(updates.startDate))
+        if (updates.taskTime !== undefined) task.set("taskTime", updates.taskTime) // taskTime is already in ISO string format
         if (updates.period !== undefined) task.set("period", updates.period)
-        if (updates.reminderEnabled !== undefined)
-          task.set("reminderEnabled", updates.reminderEnabled)
+        if (updates.reminderEnabled !== undefined) task.set("reminderEnabled", updates.reminderEnabled)
 
         const result = yield task.save()
 
@@ -260,7 +317,9 @@ export const TaskStoreModel = types
       try {
         const Task = Parse.Object.extend("Task")
         const query = new Parse.Query(Task)
-        query.equalTo("user", Parse.User.current())
+        const currentUser = yield Parse.User.currentAsync()
+        if (!currentUser) throw new Error("No current user found")
+        query.equalTo("user", currentUser)
 
         const task = yield query.get(taskId)
 

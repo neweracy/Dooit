@@ -1,0 +1,91 @@
+
+
+  // Simple time picker component
+  const SimpleTimePicker = ({ onTimeSelect }: { onTimeSelect: (time: Date) => void }) => {
+    const times = [];
+    
+    // Generate times in 15-minute intervals
+    for (let hour = 0; hour < 24; hour++) {
+      for (let minute = 0; minute < 60; minute += 15) {
+        const time = new Date();
+        time.setHours(hour, minute, 0, 0);
+        times.push(time);
+      }
+    }
+
+    return (
+      <Modal visible={showTimePicker} transparent animationType="fade">
+        <View style={$modalOverlay}>
+          <View style={themed($pickerModal)}>
+            <View style={themed($pickerHeader)}>
+              <Text preset="heading" style={themed($pickerTitle)}>Select Time</Text>
+              <TouchableOpacity onPress={() => setShowTimePicker(false)}>
+                <Text style={themed($closeButtonText)}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={themed($pickerList)}>
+              {times.map((time, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={themed($pickerItem)}
+                  onPress={() => {
+                    onTimeSelect(time);
+                    setShowTimePicker(false);
+                  }}
+                >
+                  <Text style={themed($pickerItemText)}>{formatTime(time)}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+    );
+  };
+
+    const [showTimePicker, setShowTimePicker] = useState(false);
+
+  const [selectedTime, setSelectedTime] = useState(new Date());
+
+
+
+const formatTime = (time: Date) => {
+    return time.toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const $pickerList: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  maxHeight: 300,
+});
+
+
+
+
+            {/* Time Selection */}
+            <View style={themed($inputSection)}>
+              <Text preset="formLabel" style={themed($label)}>
+                Time
+              </Text>
+              <TouchableOpacity
+                onPress={() => setShowTimePicker(true)}
+                style={themed($dateTimeButton)}
+              >
+                <Text style={themed($dateTimeButtonText)}>
+                  🕐 {formatTime(selectedTime)}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+
+const $pickerItem: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  padding: spacing.md,
+  borderBottomWidth: 1,
+  borderBottomColor: colors.separator,
+});
+
+const $pickerItemText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  color: colors.text,
+  fontSize: 16,
+});
