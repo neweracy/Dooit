@@ -61,7 +61,7 @@ export function DemoNavigator() {
         options={{
           tabBarLabel: "Calendar",
           tabBarIcon: ({ focused }) => (
-            <Icon icon="components" color={focused ? colors.tint : colors.tintInactive} size={30} />
+            <Icon icon="calendar" color={focused ? colors.tint : colors.tintInactive} size={30} />
           ),
         }}
       />
@@ -84,7 +84,7 @@ export function DemoNavigator() {
           tabBarAccessibilityLabel: "Tasks",
           tabBarLabel: "Tasks",
           tabBarIcon: ({ focused }) => (
-            <Icon icon="podcast" color={focused ? colors.tint : colors.tintInactive} size={30} />
+            <Icon icon="components" color={focused ? colors.tint : colors.tintInactive} size={30} />
           ),
         }}
       />
@@ -95,7 +95,7 @@ export function DemoNavigator() {
         options={{
           tabBarLabel:"Account",
           tabBarIcon: ({ focused }) => (
-            <Icon icon="debug" color={focused ? colors.tint : colors.tintInactive} size={30} />
+            <Icon icon="community" color={focused ? colors.tint : colors.tintInactive} size={30} />
           ),
         }}
       />
