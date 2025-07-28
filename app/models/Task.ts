@@ -2,10 +2,10 @@ import { Instance, SnapshotOut, types } from "mobx-state-tree"
 import { withSetPropAction } from "./helpers/withSetPropAction"
 import Parse from "@/lib/Parse/parse"
 
-export const PeriodType = types.union(
-  types.literal("morning"),
-  types.literal("afternoon"),
-  types.literal("evening")
+export const PriorityType = types.union(
+  types.literal("high"),
+  types.literal("medium"),
+  types.literal("low")
 )
 
 export const TaskModel = types
@@ -20,7 +20,7 @@ export const TaskModel = types
     createdAt: types.maybe(types.string),
     updatedAt: types.maybe(types.string),
     taskTime: types.maybe(types.string),
-    period: types.maybe(PeriodType),
+    priority: types.maybe(PriorityType),
     reminderEnabled: types.maybe(types.boolean),
   })
   .actions(withSetPropAction)

@@ -14,6 +14,7 @@ import {
   Button,
   PressableIcon,
   Screen,
+  showQueuedAlert,
   Text,
   TextField,
   TextFieldAccessoryProps,
@@ -116,8 +117,6 @@ export const SignUpScreen: FC<SignUpScreenProps> = observer(
       // Return a "cleanup" function that React will run when the component unmounts
     }, [authPassword, authPasswordConfirm]);
 
-    
-
     // const error = isSubmitted ? validationError : "";
 
     const toLogin = () => {
@@ -132,6 +131,25 @@ export const SignUpScreen: FC<SignUpScreenProps> = observer(
         setError(null);
         setEmailError(undefined);
         setPasswordError(undefined);
+
+        if (authPassword.length <= 6) {
+          showQueuedAlert({
+            title: "Password Required",
+            message:
+              "Password must be more than 6 characters.\n Please try again.",
+            buttons: [
+              {
+                text: "Cancel",
+                onPress: () => {
+                  console.log("Password too short alert dismissed");
+                  setIsSubmitted(false);
+                },
+                style: "cancel",
+              },
+            ],
+          });
+          return;
+        }
 
         // Validate email
         const emailValidationError = emailValidator(authEmail);
@@ -339,7 +357,7 @@ export const SignUpScreen: FC<SignUpScreenProps> = observer(
         />
         <Button
           testID="register-button"
-          tx="loginScreen:tapToLogIn"
+          text="Let's Go"
           style={themed($tapButton)}
           preset="reversed"
           onPress={Register}

@@ -39,7 +39,7 @@ import { useAppTheme } from "@/utils/useAppTheme"
 const ICON_SIZE = 18      
 
 type FilterType = "all" | "completed" | "pending" | "reminders"
-type PeriodFilter = "all" | "morning" | "afternoon" | "evening"
+type PriorityFilter = "all" | "high" | "medium" | "low"
 
 import { Instance } from "mobx-state-tree"
 import { TaskModel } from "../models/Task"
@@ -54,7 +54,7 @@ export const DemoPodcastListScreen: FC<DemoTabScreenProps<"DemoPodcastList">> = 
     const [refreshing, setRefreshing] = useState(false)
     const [isLoading, setIsLoading] = useState(false)
     const [filterType, setFilterType] = useState<FilterType>("all")
-    const [periodFilter, setPeriodFilter] = useState<PeriodFilter>("all")
+    const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>("all")
 
     // initially, kick off a background refresh without the refreshing UI
     useEffect(() => {
@@ -79,10 +79,10 @@ export const DemoPodcastListScreen: FC<DemoTabScreenProps<"DemoPodcastList">> = 
         typeof task.id === 'string' &&
         typeof task.title === 'string' &&
         typeof task.isCompleted === 'boolean' &&
-        (task.period === undefined || 
-         task.period === 'morning' || 
-         task.period === 'afternoon' || 
-         task.period === 'evening')
+        (task.priority === undefined || 
+         task.priority === 'high' || 
+         task.priority === 'medium' || 
+         task.priority === 'low')
       )
     }
 
@@ -90,12 +90,7 @@ export const DemoPodcastListScreen: FC<DemoTabScreenProps<"DemoPodcastList">> = 
     const filteredTasks = useMemo(() => {
       // Type assertion for tasks from the store
       const getTypedTasks = (tasks: any[]): Task[] => {
-        return tasks.filter(isValidTask).map(task => ({
-          ...task,
-          period: task.period && ['morning', 'afternoon', 'evening'].includes(task.period) 
-            ? task.period as 'morning' | 'afternoon' | 'evening'
-            : undefined
-        }))
+        return tasks.filter(isValidTask)
       }
       
       let tasks: Task[] = []
@@ -117,13 +112,13 @@ export const DemoPodcastListScreen: FC<DemoTabScreenProps<"DemoPodcastList">> = 
           break
       }
 
-      // Apply period filter
-      if (periodFilter !== "all") {
-        tasks = tasks.filter((task) => task.period === periodFilter)
+      // Apply priority filter
+      if (priorityFilter !== "all") {
+        tasks = tasks.filter((task) => task.priority === priorityFilter)
       }
 
       return tasks
-    }, [taskStore, filterType, periodFilter])
+    }, [taskStore, filterType, priorityFilter])
 
     const getFilterButtonText = (filter: FilterType) => {
       switch (filter) {
@@ -143,7 +138,7 @@ export const DemoPodcastListScreen: FC<DemoTabScreenProps<"DemoPodcastList">> = 
         <ListView<Task>
           contentContainerStyle={themed([$styles.container, $listContentContainer])}
           data={filteredTasks}
-          extraData={`${filterType}-${periodFilter}-${taskStore.tasks.length}`}
+          extraData={`${filterType}-${priorityFilter}-${taskStore.tasks.length}`}
           refreshing={refreshing}
           estimatedItemSize={150}
           onRefresh={manualRefresh}
@@ -193,23 +188,23 @@ export const DemoPodcastListScreen: FC<DemoTabScreenProps<"DemoPodcastList">> = 
                 </View>
               </View>
 
-              {/* Period Filter */}
+              {/* Priority Filter */}
               <View style={themed($filterContainer)}>
-                <Text style={themed($filterLabel)} size="sm" text="Filter by Period:" />
+                <Text style={themed($filterLabel)} size="sm" text="Filter by Priority:" />
                 <View style={themed($filterButtonRow)}>
-                  {(["all", "morning", "afternoon", "evening"] as PeriodFilter[]).map((period) => (
+                  {(["all", "high", "medium", "low"] as PriorityFilter[]).map((priority) => (
                     <Button
-                      key={period}
+                      key={priority}
                       style={themed([
-                        $periodFilterButton,
-                        periodFilter === period && $activeFilterButton
+                        $priorityFilterButton,
+                        priorityFilter === priority && $activeFilterButton
                       ])}
                       textStyle={themed([
                         $filterButtonText,
-                        periodFilter === period && $activeFilterButtonText
+                        priorityFilter === priority && $activeFilterButtonText
                       ])}
-                      text={period.charAt(0).toUpperCase() + period.slice(1)}
-                      onPress={() => setPeriodFilter(period)}
+                      text={priority.charAt(0).toUpperCase() + priority.slice(1)}
+                      onPress={() => setPriorityFilter(priority)}
                     />
                   ))}
                 </View>
@@ -301,27 +296,27 @@ const TaskCard = observer(function TaskCard({
     })
   }
 
-  const getPeriodIcon = (period?: string) => {
-    switch (period) {
-      case "morning":
-        return "sun"
-      case "afternoon":
-        return "sun"
-      case "evening":
-        return "moon"
+  const getPriorityIcon = (priority?: string) => {
+    switch (priority) {
+      case "high":
+        return "ladybug"
+      case "medium":
+        return "settings"
+      case "low":
+        return "community"
       default:
-        return "clock"
+        return "view"
     }
   }
 
-  const getPeriodColor = (period?: string) => {
-    switch (period) {
-      case "morning":
-        return colors.palette.primary300
-      case "afternoon":
+  const getPriorityColor = (priority?: string) => {
+    switch (priority) {
+      case "high":
+        return colors.palette.angry500
+      case "medium":
         return colors.palette.secondary300
-      case "evening":
-        return colors.palette.neutral500
+      case "low":
+        return colors.palette.primary300
       default:
         return colors.palette.neutral400
     }
@@ -368,14 +363,14 @@ const TaskCard = observer(function TaskCard({
         <View style={[$styles.row, themed($metadata)]}>
           <View style={$styles.row}>
             <Icon
-              icon="clap"
+              icon={getPriorityIcon(task.priority)}
               size={12}
-              color={getPeriodColor(task.period)}
+              color={getPriorityColor(task.priority)}
             />
             <Text
               style={themed($metadataText)}
               size="xxs"
-              text={task.period?.toUpperCase() || ""}
+              text={task.priority?.toUpperCase() || "MEDIUM"}
             />
           </View>
           {task.dueDate && (
@@ -476,7 +471,7 @@ const $filterButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   minHeight: 32,
 })
 
-const $periodFilterButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+const $priorityFilterButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   backgroundColor: colors.palette.neutral200,
   borderColor: colors.palette.neutral300,
   borderRadius: 16,
