@@ -1,5 +1,5 @@
 // TaskModal.tsx - Enhanced version with start date, due date, and improved date navigation
-import React, { FC, useState } from "react";
+import React, { FC, useState, useEffect } from "react";
 import {
   StyleProp,
   ViewStyle,
@@ -31,22 +31,24 @@ export interface TaskModalProps {
     startDate: Date;
     dueDate: Date;
     taskTime: Date;
-    period: "morning" | "afternoon" | "evening";
+    priority: "high" | "medium" | "low";
     reminder: boolean;
   }) => void;
+  initialDate?: Date;
 }
 
 export const TaskModal: FC<TaskModalProps> = observer(function TaskModal(
   props
 ) {
-  const { style, visible, onClose, onSave } = props;
+  const { style, visible, onClose, onSave, initialDate } = props;
   const { themed, theme } = useAppTheme();
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [startDate, setStartDate] = useState(new Date());
+  const [startDate, setStartDate] = useState(initialDate || new Date());
   const [dueDate, setDueDate] = useState(() => {
-    const tomorrow = new Date();
+    const date = initialDate || new Date();
+    const tomorrow = new Date(date);
     tomorrow.setDate(tomorrow.getDate() + 1);
     return tomorrow;
   });
@@ -56,15 +58,25 @@ export const TaskModal: FC<TaskModalProps> = observer(function TaskModal(
   const [datePickerType, setDatePickerType] = useState<"start" | "due">(
     "start"
   );
-  const [selectedPeriod, setSelectedPeriod] = useState<
-    "morning" | "afternoon" | "evening"
-  >("morning");
+  const [selectedPriority, setSelectedPriority] = useState<
+    "high" | "medium" | "low"
+  >("medium");
   const [reminderEnabled, setReminderEnabled] = useState(true);
 
-  const periods = [
-    { key: "morning", label: "🌅 Morning", time: "6:00 AM - 12:00 PM" },
-    { key: "afternoon", label: "☀️ Afternoon", time: "12:00 PM - 6:00 PM" },
-    { key: "evening", label: "🌙 Evening", time: "6:00 PM - 12:00 AM" },
+  // Update dates when initialDate changes
+  useEffect(() => {
+    if (initialDate) {
+      setStartDate(new Date(initialDate));
+      const tomorrow = new Date(initialDate);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      setDueDate(tomorrow);
+    }
+  }, [initialDate]);
+
+  const priorities = [
+    { key: "high", label: "🔴 High Priority", description: "Urgent tasks that need immediate attention" },
+    { key: "medium", label: "🟡 Medium Priority", description: "Important tasks with moderate urgency" },
+    { key: "low", label: "🟢 Low Priority", description: "Tasks that can be done when time allows" },
   ];
 
   const handleSave = () => {
@@ -90,7 +102,7 @@ export const TaskModal: FC<TaskModalProps> = observer(function TaskModal(
       taskTime: selectedTime,
       startDate: startDate,
       dueDate: dueDate,
-      period: selectedPeriod,
+      priority: selectedPriority,
       reminder: reminderEnabled,
     });
 
@@ -99,7 +111,7 @@ export const TaskModal: FC<TaskModalProps> = observer(function TaskModal(
     setDescription("");
     setStartDate(new Date());
     setDueDate(new Date());
-    setSelectedPeriod("morning");
+    setSelectedPriority("medium");
     setReminderEnabled(true);
     onClose();
   };
@@ -628,37 +640,37 @@ export const TaskModal: FC<TaskModalProps> = observer(function TaskModal(
               </Text>
             </View>
 
-            {/* Period Selection */}
+            {/* Priority Selection */}
             <View style={themed($inputSection)}>
               <Text preset="formLabel" style={themed($label)}>
-                Period
+                Priority
               </Text>
-              <View style={themed($periodContainer)}>
-                {periods.map((period) => (
+              <View style={themed($priorityContainer)}>
+                {priorities.map((priority) => (
                   <TouchableOpacity
-                    key={period.key}
-                    onPress={() => setSelectedPeriod(period.key as any)}
+                    key={priority.key}
+                    onPress={() => setSelectedPriority(priority.key as any)}
                     style={themed([
-                      $periodButton,
-                      selectedPeriod === period.key && $periodButtonActive,
+                      $priorityButton,
+                      selectedPriority === priority.key && $priorityButtonActive,
                     ])}
                   >
                     <Text
                       style={themed([
-                        $periodButtonText,
-                        selectedPeriod === period.key &&
-                          $periodButtonTextActive,
+                        $priorityButtonText,
+                        selectedPriority === priority.key &&
+                          $priorityButtonTextActive,
                       ])}
                     >
-                      {period.label}
+                      {priority.label}
                     </Text>
                     <Text
                       style={themed([
-                        $periodTimeText,
-                        selectedPeriod === period.key && $periodTimeTextActive,
+                        $priorityDescriptionText,
+                        selectedPriority === priority.key && $priorityDescriptionTextActive,
                       ])}
                     >
-                      {period.time}
+                      {priority.description}
                     </Text>
                   </TouchableOpacity>
                 ))}
@@ -1003,11 +1015,11 @@ const $dateTimeButtonText: ThemedStyle<TextStyle> = ({ colors }) => ({
   fontSize: 16,
 });
 
-const $periodContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+const $priorityContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   gap: spacing.sm,
 });
 
-const $periodButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+const $priorityButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   borderWidth: 1,
   borderColor: colors.separator,
   borderRadius: 8,
@@ -1015,28 +1027,28 @@ const $periodButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   backgroundColor: colors.background,
 });
 
-const $periodButtonActive: ThemedStyle<ViewStyle> = ({ colors }) => ({
+const $priorityButtonActive: ThemedStyle<ViewStyle> = ({ colors }) => ({
   backgroundColor: colors.tint,
   borderColor: colors.tint,
 });
 
-const $periodButtonText: ThemedStyle<TextStyle> = ({ colors }) => ({
+const $priorityButtonText: ThemedStyle<TextStyle> = ({ colors }) => ({
   color: colors.text,
   fontSize: 16,
   fontWeight: "600",
 });
 
-const $periodButtonTextActive: ThemedStyle<TextStyle> = ({ colors }) => ({
+const $priorityButtonTextActive: ThemedStyle<TextStyle> = ({ colors }) => ({
   color: colors.background,
 });
 
-const $periodTimeText: ThemedStyle<TextStyle> = ({ colors }) => ({
+const $priorityDescriptionText: ThemedStyle<TextStyle> = ({ colors }) => ({
   color: colors.textDim,
   fontSize: 12,
   marginTop: 2,
 });
 
-const $periodTimeTextActive: ThemedStyle<TextStyle> = ({ colors }) => ({
+const $priorityDescriptionTextActive: ThemedStyle<TextStyle> = ({ colors }) => ({
   color: colors.background,
 });
 
