@@ -143,6 +143,18 @@ export const DemoShowroomScreen: FC<DemoTabScreenProps<
     }
   };
 
+  // Debounced task refresh to prevent race conditions
+  const debouncedRefresh = useCallback(
+    useMemo(() => {
+      let timeoutId: NodeJS.Timeout;
+      return () => {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(loadTasks, 100);
+      };
+    }, []),
+    []
+  );
+
   // Handle calendar day press
   const handleDayPress = (day: {
     dateString: string;
@@ -160,7 +172,7 @@ export const DemoShowroomScreen: FC<DemoTabScreenProps<
   // Wrapper function for Calendar component
   const handleDateSelect = (date: Date) => {
     const dayObject = {
-      dateString: date.toISOString().split('T')[0],
+      dateString: date.toISOString().split("T")[0],
       day: date.getDate(),
       month: date.getMonth() + 1,
       year: date.getFullYear(),
@@ -170,41 +182,44 @@ export const DemoShowroomScreen: FC<DemoTabScreenProps<
   };
 
   // Handle task creation
-  const handleSaveTask = useCallback(async (taskData: {
-    title: string;
-    description: string;
-    startDate: Date;
-    dueDate: Date;
-    taskTime: Date;
-    priority: "high" | "medium" | "low";
-    reminder: boolean;
-  }) => {
-    try {
-      // Use selected date if no specific date is provided
-      const startDate = taskData.startDate || selectedDate;
-      const dueDate = taskData.dueDate || selectedDate;
-      
-      const result = await createTask({
-        title: taskData.title,
-        description: taskData.description,
-        startDate: startDate.toISOString(),
-        dueDate: dueDate.toISOString(),
-        taskTime: taskData.taskTime,
-        priority: taskData.priority,
-        reminderEnabled: taskData.reminder,
-      });
+  const handleSaveTask = useCallback(
+    async (taskData: {
+      title: string;
+      description: string;
+      startDate: Date;
+      dueDate: Date;
+      taskTime: Date;
+      priority: "high" | "medium" | "low";
+      reminder: boolean;
+    }) => {
+      try {
+        // Use selected date if no specific date is provided
+        const startDate = taskData.startDate || selectedDate;
+        const dueDate = taskData.dueDate || selectedDate;
 
-      if (result) {
-        Alert.alert("Success", "Task created successfully!");
-        setTaskModalVisible(false);
-        // Refetch tasks to ensure UI is updated
-        await fetchTasks();
+        const result = await createTask({
+          title: taskData.title,
+          description: taskData.description,
+          startDate: startDate.toISOString(),
+          dueDate: dueDate.toISOString(),
+          taskTime: taskData.taskTime,
+          priority: taskData.priority,
+          reminderEnabled: taskData.reminder,
+        });
+
+        if (result) {
+          Alert.alert("Success", "Task created successfully!");
+          setTaskModalVisible(false);
+          // Use debounced refresh to prevent race conditions
+          debouncedRefresh();
+        }
+      } catch (error) {
+        console.error("Task creation error:", error);
+        Alert.alert("Error", "Failed to create task");
       }
-    } catch (error) {
-      console.error("Task creation error:", error);
-      Alert.alert("Error", "Failed to create task");
-    }
-  }, [createTask, fetchTasks, selectedDate]);
+    },
+    [createTask, debouncedRefresh, selectedDate]
+  );
 
   const scrollToIndexFailed = (info: any) => {
     const wait = new Promise((resolve) => setTimeout(resolve, 500));
@@ -216,12 +231,42 @@ export const DemoShowroomScreen: FC<DemoTabScreenProps<
   // Get tasks for selected date - use useMemo to prevent unnecessary recalculations
   const selectedDateTasks = useMemo(() => {
     if (!selectedDate) return [];
-    return getTasksForDate(selectedDate);
+    try {
+      // Create plain objects to avoid MST tree issues
+      const tasksForDate = getTasksForDate(selectedDate);
+      return tasksForDate.map((task) => ({
+        id: task.id,
+        title: task.title,
+        description: task.description,
+        priority: task.priority || "medium",
+        taskTime: task.taskTime,
+        isCompleted: task.isCompleted,
+        dueDate: task.dueDate,
+      }));
+    } catch (error) {
+      console.warn("Error getting tasks for date:", error);
+      return [];
+    }
   }, [selectedDate, tasks.length, getTasksForDate]); // Use tasks.length instead of tasks array directly
 
   // Get task counts safely
-  const completedTasksCount = useMemo(() => completedTasks.length, [completedTasks.length]);
-  const pendingTasksCount = useMemo(() => pendingTasks.length, [pendingTasks.length]);
+  const completedTasksCount = useMemo(() => {
+    try {
+      return completedTasks.length;
+    } catch (error) {
+      console.warn("Error getting completed tasks count:", error);
+      return 0;
+    }
+  }, [completedTasks.length]);
+
+  const pendingTasksCount = useMemo(() => {
+    try {
+      return pendingTasks.length;
+    } catch (error) {
+      console.warn("Error getting pending tasks count:", error);
+      return 0;
+    }
+  }, [pendingTasks.length]);
 
   // Define colors for different tasks
   const taskColors = [
@@ -235,50 +280,53 @@ export const DemoShowroomScreen: FC<DemoTabScreenProps<
   ];
 
   // Demo sections - you can customize these based on your needs
-  const demoSections = useMemo(() => [
-    {
-      name: "Task Statistics",
-      description: "Overview of your tasks",
-      data: [
-        {
-          content: (
-            <View style={themed($statsSection)}>
-              <View style={themed($statItem)}>
-                <Text style={themed($statNumber)}>{completedTasksCount}</Text>
-                <Text style={themed($statLabel)}>Completed</Text>
+  const demoSections = useMemo(
+    () => [
+      {
+        name: "Task Statistics",
+        description: "Overview of your tasks",
+        data: [
+          {
+            content: (
+              <View style={themed($statsSection)}>
+                <View style={themed($statItem)}>
+                  <Text style={themed($statNumber)}>{completedTasksCount}</Text>
+                  <Text style={themed($statLabel)}>Completed</Text>
+                </View>
+                <View style={themed($statItem)}>
+                  <Text style={themed($statNumber)}>{pendingTasksCount}</Text>
+                  <Text style={themed($statLabel)}>Pending</Text>
+                </View>
               </View>
-              <View style={themed($statItem)}>
-                <Text style={themed($statNumber)}>{pendingTasksCount}</Text>
-                <Text style={themed($statLabel)}>Pending</Text>
+            ),
+          },
+        ],
+      },
+      {
+        name: "Quick Actions",
+        description: "Common task actions",
+        data: [
+          {
+            content: (
+              <View style={themed($quickActionsSection)}>
+                <Button
+                  text="Today's Tasks"
+                  onPress={() => setSelectedDate(new Date())}
+                  style={themed($actionButton)}
+                />
+                <Button
+                  text="Clear Completed"
+                  onPress={() => console.log("Clear completed")}
+                  style={themed($actionButton)}
+                />
               </View>
-            </View>
-          ),
-        },
-      ],
-    },
-    {
-      name: "Quick Actions",
-      description: "Common task actions",
-      data: [
-        {
-          content: (
-            <View style={themed($quickActionsSection)}>
-              <Button
-                text="Today's Tasks"
-                onPress={() => setSelectedDate(new Date())}
-                style={themed($actionButton)}
-              />
-              <Button
-                text="Clear Completed"
-                onPress={() => console.log("Clear completed")}
-                style={themed($actionButton)}
-              />
-            </View>
-          ),
-        },
-      ],
-    },
-  ], [completedTasksCount, pendingTasksCount, themed]); // Add dependencies for useMemo
+            ),
+          },
+        ],
+      },
+    ],
+    [completedTasksCount, pendingTasksCount, themed]
+  ); // Add dependencies for useMemo
 
   /**
    * Toggles the drawer open/close state
@@ -327,14 +375,13 @@ export const DemoShowroomScreen: FC<DemoTabScreenProps<
           )}
           ListHeaderComponent={
             <View style={themed($heading)}>
-
-
               <Calendar
+                key={`calendar-${tasks.length}-${selectedDate.getTime()}`} // Force re-render when tasks change
                 selectedDate={selectedDate}
                 onDateSelect={handleDateSelect}
                 showTasks={true}
                 showAgenda={true}
-                agendaDays={3}
+                agendaDays={2}
                 onTaskPress={(task) => {
                   console.log("Task pressed:", task);
                   // Add your task handling logic here
