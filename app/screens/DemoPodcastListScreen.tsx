@@ -3,9 +3,6 @@ import { ComponentType, FC, useCallback, useEffect, useMemo, useState } from "re
 import {
   AccessibilityProps,
   ActivityIndicator,
-  Image,
-  ImageSourcePropType,
-  ImageStyle,
   Platform,
   StyleSheet,
   TextStyle,
@@ -33,53 +30,117 @@ import {
 } from "@/components"
 import { isRTL, translate } from "@/i18n"
 import { useStores } from "../models"
-import { Episode } from "../models/Episode"
 import { DemoTabScreenProps } from "../navigators/DemoNavigator"
 import type { ThemedStyle } from "@/theme"
 import { $styles } from "../theme"
 import { delay } from "../utils/delay"
-import { openLinkInBrowser } from "../utils/openLinkInBrowser"
 import { useAppTheme } from "@/utils/useAppTheme"
 
-const ICON_SIZE = 14
+const ICON_SIZE = 18      
 
-const rnrImage1 = require("../../assets/images/demo/rnr-image-1.png")
-const rnrImage2 = require("../../assets/images/demo/rnr-image-2.png")
-const rnrImage3 = require("../../assets/images/demo/rnr-image-3.png")
-const rnrImages = [rnrImage1, rnrImage2, rnrImage3]
+type FilterType = "all" | "completed" | "pending" | "reminders"
+type PriorityFilter = "all" | "high" | "medium" | "low"
+
+import { Instance } from "mobx-state-tree"
+import { TaskModel } from "../models/Task"
+
+type Task = Instance<typeof TaskModel>
 
 export const DemoPodcastListScreen: FC<DemoTabScreenProps<"DemoPodcastList">> = observer(
   function DemoPodcastListScreen(_props) {
-    const { episodeStore } = useStores()
+    const { taskStore } = useStores()
     const { themed } = useAppTheme()
 
     const [refreshing, setRefreshing] = useState(false)
     const [isLoading, setIsLoading] = useState(false)
+    const [filterType, setFilterType] = useState<FilterType>("all")
+    const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>("all")
 
     // initially, kick off a background refresh without the refreshing UI
     useEffect(() => {
       ;(async function load() {
         setIsLoading(true)
-        await episodeStore.fetchEpisodes()
+        await taskStore.fetchTasks()
         setIsLoading(false)
       })()
-    }, [episodeStore])
+    }, [taskStore])
 
     // simulate a longer refresh, if the refresh is too fast for UX
     async function manualRefresh() {
       setRefreshing(true)
-      await Promise.all([episodeStore.fetchEpisodes(), delay(750)])
+      await Promise.all([taskStore.fetchTasks(), delay(750)])
       setRefreshing(false)
+    }
+
+    // Type guard to ensure task has the correct shape
+    const isValidTask = (task: any): task is Task => {
+      return (
+        task &&
+        typeof task.id === 'string' &&
+        typeof task.title === 'string' &&
+        typeof task.isCompleted === 'boolean' &&
+        (task.priority === undefined || 
+         task.priority === 'high' || 
+         task.priority === 'medium' || 
+         task.priority === 'low')
+      )
+    }
+
+    // Filter tasks based on current filters
+    const filteredTasks = useMemo(() => {
+      // Type assertion for tasks from the store
+      const getTypedTasks = (tasks: any[]): Task[] => {
+        return tasks.filter(isValidTask)
+      }
+      
+      let tasks: Task[] = []
+
+      // Apply completion filter
+      switch (filterType) {
+        case "completed":
+          tasks = getTypedTasks(taskStore.completedTasks)
+          break
+        case "pending":
+          tasks = getTypedTasks(taskStore.pendingTasks)
+          break
+        case "reminders":
+          tasks = getTypedTasks(taskStore.tasksWithReminders)
+          break
+        case "all":
+        default:
+          tasks = getTypedTasks(taskStore.tasksByDueDate)
+          break
+      }
+
+      // Apply priority filter
+      if (priorityFilter !== "all") {
+        tasks = tasks.filter((task) => task.priority === priorityFilter)
+      }
+
+      return tasks
+    }, [taskStore, filterType, priorityFilter])
+
+    const getFilterButtonText = (filter: FilterType) => {
+      switch (filter) {
+        case "all":
+          return `All (${taskStore.tasks.length})`
+        case "completed":
+          return `Completed (${taskStore.completedTasks.length})`
+        case "pending":
+          return `Pending (${taskStore.pendingTasks.length})`
+        case "reminders":
+          return `Reminders (${taskStore.tasksWithReminders.length})`
+      }
     }
 
     return (
       <Screen preset="fixed" safeAreaEdges={["top"]} contentContainerStyle={$styles.flex1}>
-        <ListView<Episode>
+        <ListView<Task>
           contentContainerStyle={themed([$styles.container, $listContentContainer])}
-          data={episodeStore.episodesForList.slice()}
-          extraData={episodeStore.favorites.length + episodeStore.episodes.length}
+          data={filteredTasks}
+          extraData={`${filterType}-${priorityFilter}-${taskStore.tasks.length}`}
           refreshing={refreshing}
-          estimatedItemSize={177}
+          estimatedItemSize={150}
           onRefresh={manualRefresh}
           ListEmptyComponent={
             isLoading ? (
@@ -88,47 +149,74 @@ export const DemoPodcastListScreen: FC<DemoTabScreenProps<"DemoPodcastList">> = 
               <EmptyState
                 preset="generic"
                 style={themed($emptyState)}
-                headingTx={
-                  episodeStore.favoritesOnly
-                    ? "demoPodcastListScreen:noFavoritesEmptyState.heading"
-                    : undefined
-                }
-                contentTx={
-                  episodeStore.favoritesOnly
-                    ? "demoPodcastListScreen:noFavoritesEmptyState.content"
-                    : undefined
-                }
-                button={episodeStore.favoritesOnly ? "" : undefined}
+                heading="No tasks found"
+                content="Create your first task to get started"
                 buttonOnPress={manualRefresh}
-                imageStyle={$emptyStateImage}
-                ImageProps={{ resizeMode: "contain" }}
               />
             )
           }
           ListHeaderComponent={
-            <View style={themed($heading)}>
-              <Text preset="heading" tx="demoPodcastListScreen:title" />
-              {(episodeStore.favoritesOnly || episodeStore.episodesForList.length > 0) && (
-                <View style={themed($toggle)}>
-                  <Switch
-                    value={episodeStore.favoritesOnly}
-                    onValueChange={() =>
-                      episodeStore.setProp("favoritesOnly", !episodeStore.favoritesOnly)
-                    }
-                    labelTx="demoPodcastListScreen:onlyFavorites"
-                    labelPosition="left"
-                    labelStyle={$labelStyle}
-                    accessibilityLabel={translate("demoPodcastListScreen:accessibility.switch")}
-                  />
+            <View>
+              <View style={themed($heading)}>
+                <Text preset="heading" text="Task Management" />
+                <Text 
+                  style={themed($subtitle)} 
+                  size="md" 
+                  text={`${filteredTasks.length} tasks`} 
+                />
+              </View>
+              
+              {/* Filter Buttons */}
+              <View style={themed($filterContainer)}>
+                <Text style={themed($filterLabel)} size="sm" text="Filter by Status:" />
+                <View style={themed($filterButtonRow)}>
+                  {(["all", "pending", "completed", "reminders"] as FilterType[]).map((filter) => (
+                    <Button
+                      key={filter}
+                      style={themed([
+                        $filterButton,
+                        filterType === filter && $activeFilterButton
+                      ])}
+                      textStyle={themed([
+                        $filterButtonText,
+                        filterType === filter && $activeFilterButtonText
+                      ])}
+                      text={getFilterButtonText(filter)}
+                      onPress={() => setFilterType(filter)}
+                    />
+                  ))}
                 </View>
-              )}
+              </View>
+
+              {/* Priority Filter */}
+              <View style={themed($filterContainer)}>
+                <Text style={themed($filterLabel)} size="sm" text="Filter by Priority:" />
+                <View style={themed($filterButtonRow)}>
+                  {(["all", "high", "medium", "low"] as PriorityFilter[]).map((priority) => (
+                    <Button
+                      key={priority}
+                      style={themed([
+                        $priorityFilterButton,
+                        priorityFilter === priority && $activeFilterButton
+                      ])}
+                      textStyle={themed([
+                        $filterButtonText,
+                        priorityFilter === priority && $activeFilterButtonText
+                      ])}
+                      text={priority.charAt(0).toUpperCase() + priority.slice(1)}
+                      onPress={() => setPriorityFilter(priority)}
+                    />
+                  ))}
+                </View>
+              </View>
             </View>
           }
           renderItem={({ item }) => (
-            <EpisodeCard
-              episode={item}
-              isFavorite={episodeStore.hasFavorite(item)}
-              onPressFavorite={() => episodeStore.toggleFavorite(item)}
+            <TaskCard
+              task={item}
+              onToggleComplete={() => taskStore.toggleTaskCompletion(item.id)}
+              onToggleReminder={() => taskStore.toggleTaskReminder(item.id)}
+              onDelete={() => taskStore.deleteTask(item.id)}
             />
           )}
         />
@@ -137,173 +225,204 @@ export const DemoPodcastListScreen: FC<DemoTabScreenProps<"DemoPodcastList">> = 
   },
 )
 
-const EpisodeCard = observer(function EpisodeCard({
-  episode,
-  isFavorite,
-  onPressFavorite,
+const TaskCard = observer(function TaskCard({
+  task,
+  onToggleComplete,
+  onToggleReminder,
+  onDelete,
 }: {
-  episode: Episode
-  onPressFavorite: () => void
-  isFavorite: boolean
+  task: Task
+  onToggleComplete: () => void
+  onToggleReminder: () => void
+  onDelete: () => void
 }) {
   const {
     theme: { colors },
     themed,
   } = useAppTheme()
 
-  const liked = useSharedValue(isFavorite ? 1 : 0)
-  const imageUri = useMemo<ImageSourcePropType>(() => {
-    return rnrImages[Math.floor(Math.random() * rnrImages.length)]
-  }, [])
+  const completed = useSharedValue(task.isCompleted ? 1 : 0)
+  const reminderEnabled = useSharedValue(task.reminderEnabled ? 1 : 0)
 
-  // Grey heart
-  const animatedLikeButtonStyles = useAnimatedStyle(() => {
+  // Update animation values when task changes
+  useEffect(() => {
+    completed.value = withSpring(task.isCompleted ? 1 : 0)
+    reminderEnabled.value = withSpring(task.reminderEnabled ? 1 : 0)
+  }, [task.isCompleted, task.reminderEnabled, completed, reminderEnabled])
+
+  // Completion checkbox animation
+  const animatedCheckboxStyles = useAnimatedStyle(() => {
     return {
-      transform: [
-        {
-          scale: interpolate(liked.value, [0, 1], [1, 0], Extrapolation.EXTEND),
-        },
-      ],
-      opacity: interpolate(liked.value, [0, 1], [1, 0], Extrapolation.CLAMP),
+      transform: [{ scale: interpolate(completed.value, [0, 1], [1, 1.2], Extrapolation.CLAMP) }],
+      opacity: interpolate(completed.value, [0, 1], [0.6, 1], Extrapolation.CLAMP),
     }
   })
 
-  // Pink heart
-  const animatedUnlikeButtonStyles = useAnimatedStyle(() => {
+  // Reminder bell animation
+  const animatedReminderStyles = useAnimatedStyle(() => {
     return {
-      transform: [
-        {
-          scale: liked.value,
-        },
-      ],
-      opacity: liked.value,
+      transform: [{ scale: interpolate(reminderEnabled.value, [0, 1], [1, 1.1], Extrapolation.CLAMP) }],
+      opacity: interpolate(reminderEnabled.value, [0, 1], [0.4, 1], Extrapolation.CLAMP),
     }
   })
 
-  const handlePressFavorite = useCallback(() => {
-    onPressFavorite()
-    liked.value = withSpring(liked.value ? 0 : 1)
-  }, [liked, onPressFavorite])
+  const handleToggleComplete = useCallback(() => {
+    onToggleComplete()
+    completed.value = withSpring(completed.value ? 0 : 1)
+  }, [completed, onToggleComplete])
 
-  /**
-   * Android has a "longpress" accessibility action. iOS does not, so we just have to use a hint.
-   * @see https://reactnative.dev/docs/accessibility#accessibilityactions
-   */
-  const accessibilityHintProps = useMemo(
-    () =>
-      Platform.select<AccessibilityProps>({
-        ios: {
-          accessibilityLabel: episode.title,
-          accessibilityHint: translate("demoPodcastListScreen:accessibility.cardHint", {
-            action: isFavorite ? "unfavorite" : "favorite",
-          }),
-        },
-        android: {
-          accessibilityLabel: episode.title,
-          accessibilityActions: [
-            {
-              name: "longpress",
-              label: translate("demoPodcastListScreen:accessibility.favoriteAction"),
-            },
-          ],
-          onAccessibilityAction: ({ nativeEvent }) => {
-            if (nativeEvent.actionName === "longpress") {
-              handlePressFavorite()
-            }
-          },
-        },
-      }),
-    [episode.title, handlePressFavorite, isFavorite],
-  )
+  const handleToggleReminder = useCallback(() => {
+    onToggleReminder()
+    reminderEnabled.value = withSpring(reminderEnabled.value ? 0 : 1)
+  }, [reminderEnabled, onToggleReminder])
 
-  const handlePressCard = () => {
-    openLinkInBrowser(episode.enclosure.link)
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return ""
+    const date = new Date(dateString)
+    return date.toLocaleDateString(undefined, { 
+      month: 'short', 
+      day: 'numeric',
+      year: date.getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined 
+    })
   }
 
-  const ButtonLeftAccessory: ComponentType<ButtonAccessoryProps> = useMemo(
+  const formatTime = (timeString?: string) => {
+    if (!timeString) return ""
+    const time = new Date(timeString)
+    return time.toLocaleTimeString(undefined, { 
+      hour: 'numeric', 
+      minute: '2-digit',
+      hour12: true 
+    })
+  }
+
+  const getPriorityIcon = (priority?: string) => {
+    switch (priority) {
+      case "high":
+        return "spot"
+      case "medium":
+        return "spot"
+      case "low":
+        return "spot"
+      default:
+        return ""
+    }
+  }
+
+  const getPriorityColor = (priority?: string) => {
+    switch (priority) {
+      case "high":
+        return colors.palette.angry500
+      case "medium":
+        return colors.palette.secondary300
+      case "low":
+        return colors.palette.primary300
+      default:
+        return colors.palette.neutral400
+    }
+  }
+
+  const CheckboxAccessory: ComponentType<ButtonAccessoryProps> = useMemo(
     () =>
-      function ButtonLeftAccessory() {
+      function CheckboxAccessory() {
         return (
-          <View>
-            <Animated.View
-              style={[
-                $styles.row,
-                themed($iconContainer),
-                StyleSheet.absoluteFill,
-                animatedLikeButtonStyles,
-              ]}
-            >
-              <Icon
-                icon="heart"
-                size={ICON_SIZE}
-                color={colors.palette.neutral800} // dark grey
-              />
-            </Animated.View>
-            <Animated.View
-              style={[$styles.row, themed($iconContainer), animatedUnlikeButtonStyles]}
-            >
-              <Icon
-                icon="heart"
-                size={ICON_SIZE}
-                color={colors.palette.primary400} // pink
-              />
-            </Animated.View>
-          </View>
+          <Animated.View style={[themed($iconContainer), animatedCheckboxStyles]}>
+            <Icon
+              icon={task.isCompleted ? "check" : "view"}
+              size={ICON_SIZE}
+              color={task.isCompleted ? colors.palette.primary400 : colors.palette.neutral600}
+            />
+          </Animated.View>
         )
       },
-    [animatedLikeButtonStyles, animatedUnlikeButtonStyles, colors, themed],
+    [animatedCheckboxStyles, task.isCompleted, colors, themed],
+  )
+
+  const ReminderAccessory: ComponentType<ButtonAccessoryProps> = useMemo(
+    () =>
+      function ReminderAccessory() {
+        return (
+          <Animated.View style={[themed($iconContainer), animatedReminderStyles]}>
+            <Icon
+              icon="bell"
+              size={ICON_SIZE}
+              
+              color={task.reminderEnabled ? colors.palette.primary400 : colors.palette.neutral400}
+            />
+          </Animated.View>
+        )
+      },
+    [animatedReminderStyles, task.reminderEnabled, colors, themed],
   )
 
   return (
     <Card
-      style={themed($item)}
+      style={themed([$item, task.isCompleted && $completedItem])}
       verticalAlignment="force-footer-bottom"
-      onPress={handlePressCard}
-      onLongPress={handlePressFavorite}
       HeadingComponent={
         <View style={[$styles.row, themed($metadata)]}>
-          <Text
-            style={themed($metadataText)}
-            size="xxs"
-            accessibilityLabel={episode.datePublished.accessibilityLabel}
-          >
-            {episode.datePublished.textLabel}
-          </Text>
-          <Text
-            style={themed($metadataText)}
-            size="xxs"
-            accessibilityLabel={episode.duration.accessibilityLabel}
-          >
-            {episode.duration.textLabel}
-          </Text>
+          <View style={$styles.row}>
+            <Icon
+              icon={getPriorityIcon(task.priority)}
+              size={12}
+              color={getPriorityColor(task.priority)}
+            />
+            <Text
+              style={themed($metadataText)}
+              size="xxs"
+              text={task.priority?.toUpperCase() || "MEDIUM"}
+            />
+          </View>
+          {task.dueDate && (
+            <Text
+              style={themed($metadataText)}
+              size="xxs"
+              text={formatDate(task.dueDate)}
+            />
+          )}
+          {task.taskTime && (
+            <Text
+              style={themed($metadataText)}
+              size="xxs"
+              text={formatTime(task.taskTime)}
+            />
+          )}
         </View>
       }
-      content={`${episode.parsedTitleAndSubtitle.title} - ${episode.parsedTitleAndSubtitle.subtitle}`}
-      {...accessibilityHintProps}
-      RightComponent={<Image source={imageUri} style={themed($itemThumbnail)} />}
+      content={task.title}
+      contentStyle={themed([task.isCompleted && $completedText])}
       FooterComponent={
-        <Button
-          onPress={handlePressFavorite}
-          onLongPress={handlePressFavorite}
-          style={themed([$favoriteButton, isFavorite && $unFavoriteButton])}
-          accessibilityLabel={
-            isFavorite
-              ? translate("demoPodcastListScreen:accessibility.unfavoriteIcon")
-              : translate("demoPodcastListScreen:accessibility.favoriteIcon")
-          }
-          LeftAccessory={ButtonLeftAccessory}
-        >
+        task.description ? (
           <Text
-            size="xxs"
-            accessibilityLabel={episode.duration.accessibilityLabel}
-            weight="medium"
-            text={
-              isFavorite
-                ? translate("demoPodcastListScreen:unfavoriteButton")
-                : translate("demoPodcastListScreen:favoriteButton")
-            }
+            style={themed([$description, task.isCompleted && $completedText])}
+            size="sm"
+            text={task.description}
           />
-        </Button>
+        ) : undefined
+      }
+      RightComponent={
+        <View style={themed($actionButtons)}>
+          <Button
+            style={themed($actionButton)}
+            onPress={handleToggleComplete}
+            LeftAccessory={CheckboxAccessory}
+          />
+          <Button
+            style={themed($actionButton)}
+            onPress={handleToggleReminder}
+            LeftAccessory={ReminderAccessory}
+          />
+          <Button
+            style={themed([$actionButton, $deleteButton])}
+            onPress={onDelete}
+          >
+            <Icon
+              icon="x"
+              size={ICON_SIZE}
+              color={colors.palette.angry500}
+            />
+          </Button>
+        </View>
       }
     />
   )
@@ -318,69 +437,136 @@ const $listContentContainer: ThemedStyle<ContentStyle> = ({ spacing }) => ({
 
 const $heading: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   marginBottom: spacing.md,
+  alignItems: "center",
+})
+
+const $subtitle: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
+  color: colors.textDim,
+  marginTop: spacing.xs,
+})
+
+const $filterContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  marginBottom: spacing.md,
+})
+
+const $filterLabel: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
+  color: colors.textDim,
+  marginBottom: spacing.xs,
+  fontWeight: "600",
+})
+
+const $filterButtonRow: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  
+  flexDirection: "row",
+  flexWrap: "wrap",
+  gap: spacing.xs,
+})
+
+const $filterButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  backgroundColor: colors.palette.neutral200,
+  borderColor: colors.palette.neutral300,
+  borderRadius: 16,
+  paddingHorizontal: spacing.sm,
+  paddingVertical: spacing.xs,
+  minHeight: 32,
+})
+
+const $priorityFilterButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  backgroundColor: colors.palette.neutral200,
+  borderColor: colors.palette.neutral300,
+  borderRadius: 16,
+  paddingHorizontal: spacing.sm,
+  paddingVertical: spacing.xs,
+  minHeight: 32,
+  flex: 1,
+  maxWidth: "27%",
+})
+
+const $activeFilterButton: ThemedStyle<ViewStyle> = ({ colors }) => ({
+  backgroundColor: colors.palette.primary100,
+  borderColor: colors.palette.primary300,
+})
+
+const $filterButtonText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  color: colors.textDim,
+  fontSize: 12,
+  fontWeight: "500",
+})
+
+const $activeFilterButtonText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  color: colors.palette.primary600,
+  fontWeight: "600",
 })
 
 const $item: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   padding: spacing.md,
   marginTop: spacing.md,
-  minHeight: 120,
+  minHeight: 100,
   backgroundColor: colors.palette.neutral100,
 })
 
-const $itemThumbnail: ThemedStyle<ImageStyle> = ({ spacing }) => ({
-  marginTop: spacing.sm,
-  borderRadius: 50,
-  alignSelf: "flex-start",
+const $completedItem: ThemedStyle<ViewStyle> = ({ colors }) => ({
+  backgroundColor: colors.palette.neutral100,
+  opacity: 0.8,
 })
 
-const $toggle: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  marginTop: spacing.md,
+const $completedText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  textDecorationLine: "line-through",
+  color: colors.textDim,
 })
 
-const $labelStyle: TextStyle = {
-  textAlign: "left",
-}
-
-const $iconContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  height: ICON_SIZE,
-  width: ICON_SIZE,
-  marginEnd: spacing.sm,
-})
-
-const $metadata: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
+const $description: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
   color: colors.textDim,
   marginTop: spacing.xs,
+  fontStyle: "italic",
+})
+
+const $iconContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  // padding: spacing.xs, 
+  alignItems: "center",
+  justifyContent: "center",
+})
+
+const $metadata: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  justifyContent: "space-between",
+  alignItems: "center",
+  marginBottom: spacing.xs,
 })
 
 const $metadataText: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
   color: colors.textDim,
-  marginEnd: spacing.md,
-  marginBottom: spacing.xs,
+  marginStart: spacing.xs,
 })
 
-const $favoriteButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
-  borderRadius: 17,
-  marginTop: spacing.md,
-  justifyContent: "flex-start",
-  backgroundColor: colors.palette.neutral300,
+const $actionButtons: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flexDirection: "row",
+  alignItems: "center",
+  gap: spacing.xs,
+})
+
+const $actionButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  backgroundColor: colors.palette.neutral200,
   borderColor: colors.palette.neutral300,
-  paddingHorizontal: spacing.md,
-  paddingTop: spacing.xxxs,
-  paddingBottom: 0,
-  minHeight: 32,
-  alignSelf: "flex-start",
+  // borderRadius: 20,
+  width: 36,
+  height: 20,
+  padding: 0,
+  alignItems: "center",
+  justifyContent: "center",
 })
 
-const $unFavoriteButton: ThemedStyle<ViewStyle> = ({ colors }) => ({
-  borderColor: colors.palette.primary100,
-  backgroundColor: colors.palette.primary100,
+const $deleteButton: ThemedStyle<ViewStyle> = ({ colors }) => ({
+  backgroundColor: colors.palette.angry100,
+  borderColor: colors.palette.angry100,
+  borderRadius: 20,
+  width: 44,
+  height: 20,
+  paddingTop: 18,
+  alignItems: "center",
+  justifyContent: "center",
 })
 
 const $emptyState: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   marginTop: spacing.xxl,
 })
-
-const $emptyStateImage: ImageStyle = {
-  transform: [{ scaleX: isRTL ? -1 : 1 }],
-}
 // #endregion
