@@ -80,14 +80,14 @@ export const DemoDebugScreen: FC<DemoTabScreenProps<
         style={themed($reportBugsLink)}
         tx="demoDebugScreen:reportBugs"
         onPress={() =>
-          openLinkInBrowser("https://github.com/infinitered/ignite/issues")
+          openLinkInBrowser("https://github.com/neweracy/Dooit/issues")
         }
       />
 
       <Text
         style={themed($title)}
         preset="heading"
-        tx="demoDebugScreen:title"
+        text="Account"
       />
       <Text preset="bold">Current system theme: {colorScheme}</Text>
       <Text preset="bold">Current app theme: {themeContext}</Text>
