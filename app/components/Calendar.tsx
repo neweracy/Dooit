@@ -60,6 +60,23 @@ interface AgendaSection {
   date: Date;
 }
 
+// ENHANCEMENT 1: New interfaces for task types and periods
+interface TaskPeriod {
+  startDate: Date;
+  endDate: Date;
+  task: any;
+  isStart: boolean;
+  isEnd: boolean;
+  isMiddle: boolean;
+  isSingleDay: boolean;
+}
+
+interface DayTaskInfo {
+  singleDayTasks: any[];
+  multiDayPeriods: TaskPeriod[];
+  allTasks: any[];
+}
+
 /**
  * Custom Calendar component with task integration and agenda list
  */
@@ -112,6 +129,110 @@ export const Calendar = observer(function Calendar(props: CalendarProps) {
   const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
   const daysInPrevMonth = new Date(currentYear, currentMonth, 0).getDate();
 
+  // ENHANCEMENT 2: Helper function to check if a task spans multiple days
+  const isMultiDayTask = useCallback((task: any): boolean => {
+    if (!task.startDate || !task.dueDate) return false;
+    
+    const startDate = new Date(task.startDate);
+    const endDate = new Date(task.dueDate);
+    
+    // Reset time to compare only dates
+    startDate.setHours(0, 0, 0, 0);
+    endDate.setHours(0, 0, 0, 0);
+    
+    return startDate.getTime() !== endDate.getTime();
+  }, []);
+
+  // ENHANCEMENT 3: Helper function to get task period info for a specific date
+  const getTaskPeriodInfo = useCallback((task: any, date: Date): TaskPeriod | null => {
+    if (!task.startDate || !task.dueDate) return null;
+    
+    const startDate = new Date(task.startDate);
+    const endDate = new Date(task.dueDate);
+    const checkDate = new Date(date);
+    
+    // Reset times for date comparison
+    startDate.setHours(0, 0, 0, 0);
+    endDate.setHours(0, 0, 0, 0);
+    checkDate.setHours(0, 0, 0, 0);
+    
+    const startTime = startDate.getTime();
+    const endTime = endDate.getTime();
+    const checkTime = checkDate.getTime();
+    
+    // Check if date falls within task period
+    if (checkTime < startTime || checkTime > endTime) return null;
+    
+    const isSingleDay = startTime === endTime;
+    const isStart = checkTime === startTime;
+    const isEnd = checkTime === endTime;
+    const isMiddle = !isStart && !isEnd && !isSingleDay;
+    
+    return {
+      startDate,
+      endDate,
+      task,
+      isStart,
+      isEnd,
+      isMiddle,
+      isSingleDay,
+    };
+  }, []);
+
+  // ENHANCEMENT 4: Enhanced task mapping for the current month
+  const monthTasksEnhanced = useMemo(() => {
+    if (!showTasks) return {};
+
+    const tasksMap: { [key: string]: DayTaskInfo } = {};
+    const allTasks = taskStore.tasks.slice();
+
+    // Initialize all days of the month
+    for (let day = 1; day <= daysInMonth; day++) {
+      tasksMap[day.toString()] = {
+        singleDayTasks: [],
+        multiDayPeriods: [],
+        allTasks: [],
+      };
+    }
+
+    allTasks.forEach((task) => {
+      if (task.startDate && task.dueDate) {
+        const startDate = new Date(task.startDate);
+        const endDate = new Date(task.dueDate);
+        
+        // Check each day of the month to see if task overlaps
+        for (let day = 1; day <= daysInMonth; day++) {
+          const checkDate = new Date(currentYear, currentMonth, day);
+          const periodInfo = getTaskPeriodInfo(task, checkDate);
+          
+          if (periodInfo) {
+            const dayKey = day.toString();
+            tasksMap[dayKey].allTasks.push(task);
+            
+            if (periodInfo.isSingleDay) {
+              tasksMap[dayKey].singleDayTasks.push(task);
+            } else {
+              tasksMap[dayKey].multiDayPeriods.push(periodInfo);
+            }
+          }
+        }
+      } else if (task.dueDate) {
+        // Fallback for tasks with only dueDate
+        const taskDate = new Date(task.dueDate);
+        if (
+          taskDate.getMonth() === currentMonth &&
+          taskDate.getFullYear() === currentYear
+        ) {
+          const dayKey = taskDate.getDate().toString();
+          tasksMap[dayKey].singleDayTasks.push(task);
+          tasksMap[dayKey].allTasks.push(task);
+        }
+      }
+    });
+
+    return tasksMap;
+  }, [taskStore.tasks, currentMonth, currentYear, showTasks, daysInMonth, getTaskPeriodInfo]);
+
   // Format section title
   const formatSectionTitle = (date: Date): string => {
     const today = new Date();
@@ -141,50 +262,54 @@ export const Calendar = observer(function Calendar(props: CalendarProps) {
     });
   };
 
-  // Get tasks for the current month
-  const monthTasks = useMemo(() => {
-    if (!showTasks) return {};
+  // Force re-computation when tasks change by using tasks length as dependency
+  const tasksVersion = useMemo(() => taskStore.tasks.length, [
+    taskStore.tasks.length,
+  ]);
 
-    const tasksMap: { [key: string]: any[] } = {};
-
-    taskStore.tasks.forEach((task) => {
-      if (task.dueDate) {
-        const taskDate = new Date(task.dueDate);
-        if (
-          taskDate.getMonth() === currentMonth &&
-          taskDate.getFullYear() === currentYear
-        ) {
-          const dateKey = taskDate.getDate().toString();
-          if (!tasksMap[dateKey]) {
-            tasksMap[dateKey] = [];
-          }
-          tasksMap[dateKey].push(task);
-        }
-      }
-    });
-
-    return tasksMap;
-  }, [taskStore.tasks, currentMonth, currentYear, showTasks]);
-
-  // Generate agenda sections for upcoming days
+  // CHANGE 1: Updated agendaSections to show tasks from startDate to dueDate
   const agendaSections = useMemo((): AgendaSection[] => {
     if (!showAgenda) return [];
 
     const sections: AgendaSection[] = [];
     const startDate = selectedDate || new Date();
 
+    // Force fresh computation
+    const allTasks = taskStore.tasks.slice();
+
     for (let i = 0; i < agendaDays; i++) {
       const date = new Date(startDate);
       date.setDate(startDate.getDate() + i);
 
-      const dayTasks = taskStore.tasks.filter((task) => {
-        if (!task.dueDate) return false;
-        const taskDate = new Date(task.dueDate);
-        return (
-          taskDate.getDate() === date.getDate() &&
-          taskDate.getMonth() === date.getMonth() &&
-          taskDate.getFullYear() === date.getFullYear()
-        );
+      // CHANGE 2: Enhanced task filtering to include tasks that span across the date
+      const dayTasks = allTasks.filter((task) => {
+        // Check if task has both startDate and dueDate
+        if (task.startDate && task.dueDate) {
+          const taskStartDate = new Date(task.startDate);
+          const taskEndDate = new Date(task.dueDate);
+          const checkDate = new Date(date);
+          
+          // Reset times for date comparison
+          taskStartDate.setHours(0, 0, 0, 0);
+          taskEndDate.setHours(0, 0, 0, 0);
+          checkDate.setHours(0, 0, 0, 0);
+          
+          // Include task if the date falls within the task's date range
+          return checkDate.getTime() >= taskStartDate.getTime() && 
+                 checkDate.getTime() <= taskEndDate.getTime();
+        }
+        
+        // Fallback: if only dueDate exists, use original logic
+        if (task.dueDate) {
+          const taskDate = new Date(task.dueDate);
+          return (
+            taskDate.getDate() === date.getDate() &&
+            taskDate.getMonth() === date.getMonth() &&
+            taskDate.getFullYear() === date.getFullYear()
+          );
+        }
+        
+        return false;
       });
 
       // Always add section, even if no tasks (to show empty state)
@@ -196,7 +321,7 @@ export const Calendar = observer(function Calendar(props: CalendarProps) {
     }
 
     return sections;
-  }, [taskStore.tasks, selectedDate, agendaDays, showAgenda]);
+  }, [taskStore.tasks, selectedDate, agendaDays, showAgenda, tasksVersion]);
 
   // Navigate to previous month
   const goToPrevMonth = useCallback(() => {
@@ -269,6 +394,84 @@ export const Calendar = observer(function Calendar(props: CalendarProps) {
     [currentYear, currentMonth, minDate, maxDate]
   );
 
+  // ENHANCEMENT 5: Render multi-day task period indicator
+  const renderMultiDayIndicator = useCallback((periods: TaskPeriod[]) => {
+    if (periods.length === 0) return null;
+
+    return (
+      <View style={themed($multiDayContainer)}>
+        {periods.slice(0, 3).map((period, index) => (
+          <View
+            key={`${period.task.id}-${index}`}
+            style={themed([
+              $multiDayIndicator,
+              period.isStart && $multiDayStart,
+              period.isEnd && $multiDayEnd,
+              period.isMiddle && $multiDayMiddle,
+              { backgroundColor: getTaskColor(period.task, index) },
+            ])}
+          />
+        ))}
+        {periods.length > 3 && (
+          <Text style={themed($multiDayOverflow)}>+{periods.length - 3}</Text>
+        )}
+      </View>
+    );
+  }, [themed]);
+
+  // ENHANCEMENT 6: Render single day task dots
+  const renderSingleDayDots = useCallback((tasks: any[]) => {
+    if (tasks.length === 0) return null;
+
+    const maxDots = 4;
+    const visibleTasks = tasks.slice(0, maxDots);
+    const remainingCount = tasks.length - maxDots;
+
+    return (
+      <View style={themed($taskDotsContainer)}>
+        {visibleTasks.map((task, index) => (
+          <View
+            key={task.id || index}
+            style={themed([
+              $taskDot,
+              task.isCompleted && $taskDotCompleted,
+              { backgroundColor: getTaskColor(task, index) },
+            ])}
+          />
+        ))}
+        {remainingCount > 0 && (
+          <Text style={themed($taskDotsOverflow)}>+{remainingCount}</Text>
+        )}
+      </View>
+    );
+  }, [themed]);
+
+  // ENHANCEMENT 7: Helper function to get consistent task colors
+  const getTaskColor = useCallback((task: any, index: number) => {
+    const colors = [
+      '#FF6B6B', // Red
+      '#4ECDC4', // Teal
+      '#45B7D1', // Blue
+      '#96CEB4', // Green
+      '#FECA57', // Yellow
+      '#FF9FF3', // Pink
+      '#54A0FF', // Light Blue
+      '#5F27CD', // Purple
+    ];
+    
+    // Use task priority for color if available
+    if (task.priority) {
+      switch (task.priority) {
+        case 'high': return '#FF6B6B';
+        case 'medium': return '#FECA57';
+        case 'low': return '#96CEB4';
+      }
+    }
+    
+    // Fallback to index-based color
+    return colors[index % colors.length];
+  }, []);
+
   // Generate calendar days
   const generateCalendarDays = () => {
     const days = [];
@@ -289,9 +492,12 @@ export const Calendar = observer(function Calendar(props: CalendarProps) {
 
     // Current month days
     for (let day = 1; day <= daysInMonth; day++) {
-      const dayTasks = monthTasks[day.toString()] || [];
-      const hasCompletedTasks = dayTasks.some((task) => task.isCompleted);
-      const hasPendingTasks = dayTasks.some((task) => !task.isCompleted);
+      const dayInfo = monthTasksEnhanced[day.toString()] || {
+        singleDayTasks: [],
+        multiDayPeriods: [],
+        allTasks: [],
+      };
+      
       const disabled = isDisabled(day);
 
       days.push(
@@ -317,14 +523,14 @@ export const Calendar = observer(function Calendar(props: CalendarProps) {
             {day}
           </Text>
 
-          {showTasks && dayTasks.length > 0 && (
-            <View style={themed($taskIndicatorContainer)}>
-              {hasPendingTasks && (
-                <View style={themed($taskIndicatorPending)} />
-              )}
-              {hasCompletedTasks && (
-                <View style={themed($taskIndicatorCompleted)} />
-              )}
+          {/* ENHANCEMENT 8: Enhanced task indicators */}
+          {showTasks && (
+            <View style={themed($taskIndicatorsContainer)}>
+              {/* Multi-day task periods */}
+              {renderMultiDayIndicator(dayInfo.multiDayPeriods)}
+              
+              {/* Single day task dots */}
+              {renderSingleDayDots(dayInfo.singleDayTasks)}
             </View>
           )}
         </TouchableOpacity>
@@ -348,9 +554,25 @@ export const Calendar = observer(function Calendar(props: CalendarProps) {
     return days;
   };
 
-  // Render agenda item
+  // CHANGE 3: Enhanced agenda item rendering with task period context
   const renderAgendaItem = useCallback(
-    ({ item }: { item: any }) => {
+    ({ item, section }: { item: any; section: AgendaSection }) => {
+      // CHANGE 4: Determine task period context for this specific date
+      const currentDate = section.date;
+      const taskPeriodInfo = getTaskPeriodInfo(item, currentDate);
+      
+      // CHANGE 5: Generate period indicator text
+      const getPeriodText = () => {
+        if (!taskPeriodInfo || taskPeriodInfo.isSingleDay) return null;
+        
+        if (taskPeriodInfo.isStart) return "Starts";
+        if (taskPeriodInfo.isEnd) return "Ends";
+        if (taskPeriodInfo.isMiddle) return "Continues";
+        return null;
+      };
+
+      const periodText = getPeriodText();
+
       return (
         <TouchableOpacity
           style={themed($agendaItem)}
@@ -361,9 +583,19 @@ export const Calendar = observer(function Calendar(props: CalendarProps) {
             style={themed([
               $agendaItemIndicator,
               item.isCompleted && $agendaItemIndicatorCompleted,
+              // CHANGE 6: Add period-specific styling
+              taskPeriodInfo?.isStart && $agendaItemIndicatorStart,
+              taskPeriodInfo?.isEnd && $agendaItemIndicatorEnd,
+              taskPeriodInfo?.isMiddle && $agendaItemIndicatorMiddle,
             ])}
           />
           <View style={themed($agendaItemContent)}>
+            {/* CHANGE 7: Add period context text */}
+            {periodText && (
+              <Text style={themed($agendaItemPeriodText)}>
+                {periodText}
+              </Text>
+            )}
             <Text
               style={themed([
                 $agendaItemTitle,
@@ -377,9 +609,21 @@ export const Calendar = observer(function Calendar(props: CalendarProps) {
                 {item.description}
               </Text>
             )}
+            {/* CHANGE 8: Show task duration for multi-day tasks */}
+            {taskPeriodInfo && !taskPeriodInfo.isSingleDay && (
+              <Text style={themed($agendaItemDuration)}>
+                {taskPeriodInfo.startDate.toLocaleDateString("en-US", { 
+                  month: "short", 
+                  day: "numeric" 
+                })} - {taskPeriodInfo.endDate.toLocaleDateString("en-US", { 
+                  month: "short", 
+                  day: "numeric" 
+                })}
+              </Text>
+            )}
             {item.dueDate && (
               <Text style={themed($agendaItemTime)}>
-                {new Date(item.dueDate).toLocaleTimeString("en-US", {
+                {new Date(item.taskTime).toLocaleTimeString("en-US", {
                   hour: "numeric",
                   minute: "2-digit",
                   hour12: true,
@@ -390,7 +634,7 @@ export const Calendar = observer(function Calendar(props: CalendarProps) {
         </TouchableOpacity>
       );
     },
-    [onTaskPress, themed]
+    [onTaskPress, themed, getTaskPeriodInfo]
   );
 
   // Render empty agenda section
@@ -479,12 +723,12 @@ export const Calendar = observer(function Calendar(props: CalendarProps) {
             <Text style={themed($taskSummaryTitle)}>
               Tasks for {selectedDate.toLocaleDateString()}
             </Text>
-            {monthTasks[selectedDate.getDate().toString()]?.length > 0 ? (
+            {monthTasksEnhanced[selectedDate.getDate().toString()]?.allTasks.length > 0 ? (
               <ScrollView
                 style={themed($tasksList)}
                 showsVerticalScrollIndicator={false}
               >
-                {monthTasks[selectedDate.getDate().toString()].map(
+                {monthTasksEnhanced[selectedDate.getDate().toString()].allTasks.map(
                   (task, index) => (
                     <TouchableOpacity
                       key={task.id || index}
@@ -525,6 +769,9 @@ export const Calendar = observer(function Calendar(props: CalendarProps) {
     </View>
   );
 });
+
+
+//  #region Styles
 
 const $container: ViewStyle = {
   backgroundColor: "transparent",
@@ -633,6 +880,76 @@ const $dayTextDisabled: ThemedStyle<TextStyle> = ({ colors, typography }) => ({
   color: colors.palette.neutral400,
 });
 
+// ENHANCEMENT 9: New styles for enhanced task indicators
+const $taskIndicatorsContainer: ThemedStyle<ViewStyle> = () => ({
+  position: "absolute",
+  bottom: 2,
+  left: 0,
+  right: 0,
+  alignItems: "center",
+});
+
+// Multi-day task period styles
+const $multiDayContainer: ThemedStyle<ViewStyle> = () => ({
+  width: "100%",
+  alignItems: "center",
+  marginBottom: 2,
+});
+
+const $multiDayIndicator: ThemedStyle<ViewStyle> = () => ({
+  height: 3,
+  width: "90%",
+  marginBottom: 1,
+});
+
+const $multiDayStart: ThemedStyle<ViewStyle> = () => ({
+  borderTopLeftRadius: 2,
+  borderBottomLeftRadius: 2,
+});
+
+const $multiDayEnd: ThemedStyle<ViewStyle> = () => ({
+  borderTopRightRadius: 2,
+  borderBottomRightRadius: 2,
+});
+
+const $multiDayMiddle: ThemedStyle<ViewStyle> = () => ({
+  // No border radius for middle segments
+});
+
+const $multiDayOverflow: ThemedStyle<TextStyle> = ({ colors, typography }) => ({
+  fontFamily: typography.primary.normal,
+  fontSize: 8,
+  color: colors.textDim,
+  marginTop: 1,
+});
+
+// Single-day task dots styles
+const $taskDotsContainer: ThemedStyle<ViewStyle> = () => ({
+  flexDirection: "row",
+  justifyContent: "center",
+  alignItems: "center",
+  flexWrap: "wrap",
+  gap: 1,
+});
+
+const $taskDot: ThemedStyle<ViewStyle> = () => ({
+  width: 4,
+  height: 4,
+  borderRadius: 2,
+});
+
+const $taskDotCompleted: ThemedStyle<ViewStyle> = () => ({
+  opacity: 0.6,
+});
+
+const $taskDotsOverflow: ThemedStyle<TextStyle> = ({ colors, typography }) => ({
+  fontFamily: typography.primary.normal,
+  fontSize: 6,
+  color: colors.textDim,
+  marginLeft: 1,
+});
+
+// Legacy styles (kept for backward compatibility)
 const $taskIndicatorContainer: ThemedStyle<ViewStyle> = () => ({
   position: "absolute",
   bottom: 4,
@@ -720,6 +1037,40 @@ const $agendaItemIndicator: ThemedStyle<ViewStyle> = ({ colors }) => ({
 
 const $agendaItemIndicatorCompleted: ThemedStyle<ViewStyle> = ({ colors }) => ({
   backgroundColor: colors.palette.primary500,
+});
+
+// CHANGE 9: New styles for period-specific indicators
+const $agendaItemIndicatorStart: ThemedStyle<ViewStyle> = ({ colors }) => ({
+  backgroundColor: colors.palette.secondary500,
+  borderTopLeftRadius: 2,
+  borderTopRightRadius: 2,
+});
+
+const $agendaItemIndicatorEnd: ThemedStyle<ViewStyle> = ({ colors }) => ({
+  backgroundColor: colors.palette.secondary500,
+  borderBottomLeftRadius: 2,
+  borderBottomRightRadius: 2,
+});
+
+const $agendaItemIndicatorMiddle: ThemedStyle<ViewStyle> = ({ colors }) => ({
+  backgroundColor: colors.palette.secondary300,
+});
+
+// CHANGE 10: New styles for period text and duration
+const $agendaItemPeriodText: ThemedStyle<TextStyle> = ({ colors, typography }) => ({
+  fontFamily: typography.primary.medium,
+  fontSize: 10,
+  color: colors.palette.secondary500,
+  textTransform: "uppercase",
+  marginBottom: 2,
+});
+
+const $agendaItemDuration: ThemedStyle<TextStyle> = ({ colors, typography }) => ({
+  fontFamily: typography.primary.normal,
+  fontSize: 11,
+  color: colors.palette.secondary400,
+  marginBottom: 2,
+  fontStyle: "italic",
 });
 
 const $agendaItemContent: ThemedStyle<ViewStyle> = () => ({

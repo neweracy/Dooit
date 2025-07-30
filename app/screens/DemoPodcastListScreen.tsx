@@ -299,13 +299,13 @@ const TaskCard = observer(function TaskCard({
   const getPriorityIcon = (priority?: string) => {
     switch (priority) {
       case "high":
-        return "ladybug"
+        return "spot"
       case "medium":
-        return "settings"
+        return "spot"
       case "low":
-        return "community"
+        return "spot"
       default:
-        return "view"
+        return ""
     }
   }
 
