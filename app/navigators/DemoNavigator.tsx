@@ -72,7 +72,7 @@ export function DemoNavigator() {
         options={{
           tabBarLabel: translate("demoNavigator:communityTab"),
           tabBarIcon: ({ focused }) => (
-            <Icon icon="community" color={focused ? colors.tint : colors.tintInactive} size={30} />
+            <Icon icon="news" color={focused ? colors.tint : colors.tintInactive} size={30} />
           ),
         }}
       />
