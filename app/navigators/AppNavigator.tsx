@@ -5,6 +5,7 @@
  * and a "main" flow which the user will use once logged in.
  */
 import { NavigationContainer, NavigatorScreenParams } from "@react-navigation/native"
+import React from "react"
 import { createNativeStackNavigator, NativeStackScreenProps } from "@react-navigation/native-stack"
 import { observer } from "mobx-react-lite"
 import * as Screens from "@/screens"
