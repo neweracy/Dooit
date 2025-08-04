@@ -111,7 +111,7 @@ export const ChooseAuthScreen: FC<ChooseAuthScreenProps> = observer(
       {
         leftIcon: "back",
         title: "Welcome to Dooit",
-        onLeftPress: () => navigation.goBack(),
+        onLeftPress: () => navigation.navigate("Welcome"),
       },
       [navigation]
     );
