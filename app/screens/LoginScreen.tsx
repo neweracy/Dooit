@@ -85,6 +85,25 @@ export const LoginScreen: FC<LoginScreenProps> = observer(function LoginScreen(
   // const error = isSubmitted ? validationError : "";
   async function onSubmit() {
     try {
+
+      if(authPassword.length <= 6 ) {
+        showQueuedAlert({
+          title: "Password Required",
+          message: "Password must be more than 6 characters.\n Please try again.",
+          buttons: [
+            {
+              text: "Cancel",
+              onPress: () => {
+                console.log("Password too short alert dismissed");
+                setIsSubmitted(false);
+              },
+              style: "cancel",
+            },
+          ],
+        });
+        return;
+      }
+
       setIsSubmitted(true);
       setAttemptsCount(attemptsCount + 1);
 
@@ -116,7 +135,7 @@ export const LoginScreen: FC<LoginScreenProps> = observer(function LoginScreen(
       // Attempt login
       const result = await login();
 
-      if (result.success) {
+      if (result.success ) {
         console.log("Login successful");
 
         // Reset form fields on success

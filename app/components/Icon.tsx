@@ -133,6 +133,7 @@ export const iconRegistry = {
   view: require("../../assets/icons/view.png"),
   x: require("../../assets/icons/x.png"),
   google: require("../../assets/icons/google.png"),
+  spot: require("../../assets/icons/black-circle.png"),
 }
 
 const $imageStyleBase: ImageStyle = {

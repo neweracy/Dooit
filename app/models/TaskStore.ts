@@ -10,14 +10,15 @@ export const TaskModel = types.model("Task", {
   title: types.string,
   description: types.string,
   isCompleted: types.boolean,
-  startDate: types.maybe(types.string), // ← ADD THIS
+  startDate: types.maybe(types.string),
   dueDate: types.maybe(types.string),
   createdAt: types.maybe(types.string),
   updatedAt: types.maybe(types.string),
   taskTime: types.maybe(types.string), // Using maybe string to handle both empty strings and null/undefined
-  period: types.maybe(types.enumeration(["morning", "afternoon", "evening"])),
+  priority: types.maybe(types.enumeration(["high", "medium", "low"])),
   reminderEnabled: types.maybe(types.boolean),
 })
+  .actions(withSetPropAction)
 
 export const TaskStoreModel = types
   .model("TaskStore")
@@ -40,11 +41,11 @@ export const TaskStoreModel = types
         return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
       })
     },
-    get tasksByPeriod() {
+    get tasksByPriority() {
       return {
-        morning: store.tasks.filter((task) => task.period === "morning"),
-        afternoon: store.tasks.filter((task) => task.period === "afternoon"),
-        evening: store.tasks.filter((task) => task.period === "evening"),
+        high: store.tasks.filter((task) => task.priority === "high"),
+        medium: store.tasks.filter((task) => task.priority === "medium"),
+        low: store.tasks.filter((task) => task.priority === "low"),
       }
     },
     get tasksWithReminders() {
@@ -114,7 +115,7 @@ export const TaskStoreModel = types
             startDate: task.get("startDate")?.toISOString(),
             dueDate: task.get("dueDate")?.toISOString(),
             taskTime: processedTaskTime,
-            period: task.get("period") || "morning",
+            priority: task.get("priority") || "medium",
             reminderEnabled: task.get("reminderEnabled") || false,
             createdAt: task.get("createdAt")?.toISOString(),
             updatedAt: task.get("updatedAt")?.toISOString(),
@@ -138,7 +139,7 @@ export const TaskStoreModel = types
       dueDate?: string
       startDate?: string
       taskTime?: Date
-      period?: "morning" | "afternoon" | "evening"
+      priority?: "high" | "medium" | "low"
       reminderEnabled?: boolean
     }) {
       const rootStore = getRoot<RootStore>(store)
@@ -161,7 +162,7 @@ export const TaskStoreModel = types
         const currentUser = yield Parse.User.currentAsync()
         if (!currentUser) throw new Error("No current user found")
         task.set("user", currentUser)
-        task.set("period", taskData.period || "morning")
+        task.set("priority", taskData.priority || "medium")
         task.set("reminderEnabled", taskData.reminderEnabled || false)
 
         if (taskData.dueDate) {
@@ -202,7 +203,7 @@ export const TaskStoreModel = types
           dueDate: result.get("dueDate")?.toISOString(),
           startDate: result.get("startDate")?.toISOString(),
           taskTime: processedTaskTime,
-          period: result.get("period"),
+          priority: result.get("priority"),
           reminderEnabled: result.get("reminderEnabled"),
           createdAt: result.get("createdAt")?.toISOString(),
           updatedAt: result.get("updatedAt")?.toISOString(),
@@ -232,7 +233,7 @@ export const TaskStoreModel = types
         title: string
         description?: string
         dueDate?: Date
-        period?: "morning" | "afternoon" | "evening"
+        priority?: "high" | "medium" | "low"
         reminder?: boolean
         [key: string]: any
       },
@@ -242,7 +243,7 @@ export const TaskStoreModel = types
         title: taskData.title,
         description: taskData.description || "",
         dueDate: taskData.dueDate?.toISOString(),
-        period: taskData.period || "morning",
+        priority: taskData.priority || "medium",
         reminderEnabled: taskData.reminder || false,
       }
 
@@ -258,7 +259,7 @@ export const TaskStoreModel = types
         startDate: string
         dueDate: string
         taskTime: string
-        period: "morning" | "afternoon" | "evening"
+        priority: "high" | "medium" | "low"
         reminderEnabled: boolean
       }>,
     ) {
@@ -284,20 +285,25 @@ export const TaskStoreModel = types
         if (updates.dueDate !== undefined) task.set("dueDate", new Date(updates.dueDate))
         if (updates.startDate !== undefined) task.set("startDate", new Date(updates.startDate))
         if (updates.taskTime !== undefined) task.set("taskTime", updates.taskTime) // taskTime is already in ISO string format
-        if (updates.period !== undefined) task.set("period", updates.period)
+        if (updates.priority !== undefined) task.set("priority", updates.priority)
         if (updates.reminderEnabled !== undefined) task.set("reminderEnabled", updates.reminderEnabled)
 
         const result = yield task.save()
 
-        // Update local state
+        // Update local state using MST actions
         const taskIndex = store.tasks.findIndex((t) => t.id === taskId)
         if (taskIndex !== -1) {
-          const updatedTask = {
-            ...store.tasks[taskIndex],
-            ...updates,
-            updatedAt: result.get("updatedAt")?.toISOString(),
-          }
-          store.tasks[taskIndex] = updatedTask
+          const task = store.tasks[taskIndex]
+          // Direct property assignment works better than setProp for this case
+          if (updates.title !== undefined) task.title = updates.title
+          if (updates.description !== undefined) task.description = updates.description
+          if (updates.isCompleted !== undefined) task.isCompleted = updates.isCompleted
+          if (updates.dueDate !== undefined) task.dueDate = updates.dueDate
+          if (updates.startDate !== undefined) task.startDate = updates.startDate
+          if (updates.taskTime !== undefined) task.taskTime = updates.taskTime
+          if (updates.priority !== undefined) task.priority = updates.priority
+          if (updates.reminderEnabled !== undefined) task.reminderEnabled = updates.reminderEnabled
+          task.updatedAt = result.get("updatedAt")?.toISOString()
         }
 
         return result
@@ -370,25 +376,25 @@ export const TaskStoreModel = types
       }
     }),
 
-    updateTaskPeriod: flow(function* updateTaskPeriod(
+    updateTaskPriority: flow(function* updateTaskPriority(
       this: any,
       taskId: string,
-      period: "morning" | "afternoon" | "evening",
+      priority: "high" | "medium" | "low",
     ) {
       try {
-        yield this.updateTask(taskId, { period })
+        yield this.updateTask(taskId, { priority })
         return true
       } catch (error) {
         return false
       }
     }),
 
-    getTasksForDateAndPeriod(date: string, period: "morning" | "afternoon" | "evening") {
+    getTasksForDateAndPriority(date: string, priority: "high" | "medium" | "low") {
       return store.tasks.filter((task) => {
         if (!task.dueDate) return false
         const taskDate = new Date(task.dueDate).toDateString()
         const filterDate = new Date(date).toDateString()
-        return taskDate === filterDate && task.period === period
+        return taskDate === filterDate && task.priority === priority
       })
     },
 
