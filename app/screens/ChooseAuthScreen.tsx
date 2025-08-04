@@ -146,7 +146,7 @@ export const ChooseAuthScreen: FC<ChooseAuthScreenProps> = observer(
             preset="reversed"
             disabled={!request || authenticationStore.isLoading}
             LeftAccessory={(props) => (
-              <Icon icon="google" {...props} size={20} color="white" />
+              <Icon icon="google" {...props} size={20} color={colors.border} />
             )}
           />
           
