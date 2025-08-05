@@ -33,6 +33,9 @@ import { customFontsToLoad } from "./theme";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { loadDateFnsLocale } from "./utils/formatDate";
 import "react-native-get-random-values";
+import { api } from "./services/api";
+
+
 
 export const NAVIGATION_PERSISTENCE_KEY = "NAVIGATION_STATE";
 
@@ -72,7 +75,16 @@ export function App() {
   const [areFontsLoaded, fontLoadError] = useFonts(customFontsToLoad);
   const [isI18nInitialized, setIsI18nInitialized] = useState(false);
 
+
+  const runTest = async () => {
+    const result = await api.getGlobalHealthcareNews();
+    if (result.kind === "ok") {
+      console.log(result.articles); // Global health articles
+    }
+  };
+
   useEffect(() => {
+
     initI18n()
       .then(() => setIsI18nInitialized(true))
       .then(() => loadDateFnsLocale());

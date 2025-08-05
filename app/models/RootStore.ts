@@ -1,4 +1,5 @@
 import { Instance, SnapshotOut, types, flow } from "mobx-state-tree"
+import { NewsStoreModel } from "./NewsStore"
 import { AuthenticationStoreModel } from "./AuthenticationStore"
 import { EpisodeStoreModel } from "./EpisodeStore"
 import { TaskStoreModel } from "./TaskStore"
@@ -8,6 +9,7 @@ import Parse from "@/lib/Parse/parse"
  * A RootStore model.
  */
 export const RootStoreModel = types.model("RootStore").props({
+  newsStore: types.optional(NewsStoreModel, {} as any),
   authenticationStore: types.optional(AuthenticationStoreModel, {}),
   episodeStore: types.optional(EpisodeStoreModel, {}),
   taskStore: types.optional(TaskStoreModel, {}),
