@@ -1,4 +1,4 @@
-import { FC, useCallback, useMemo } from "react";
+import { FC, useCallback, useMemo, useState, useEffect } from "react";
 import * as Application from "expo-application";
 import {
   LayoutAnimation,
@@ -8,6 +8,7 @@ import {
   useColorScheme,
   View,
   ViewStyle,
+  Alert,
 } from "react-native";
 import { Button, ListItem, Screen, Text } from "../components";
 import { DemoTabScreenProps } from "../navigators/DemoNavigator";
@@ -16,6 +17,12 @@ import { $styles } from "../theme";
 import { isRTL } from "@/i18n";
 import { useStores } from "../models";
 import { useAppTheme } from "@/utils/useAppTheme";
+import { 
+  registerForPushNotificationsAsync, 
+  sendPushNotification,
+  setupNotificationListeners,
+  NotificationPermissionError 
+} from "../services/notifications/notification"; // Adjust path as needed
 
 /**
  * @param {string} url - The URL to open in the browser.
@@ -31,13 +38,44 @@ const usingHermes =
 export const DemoDebugScreen: FC<DemoTabScreenProps<
   "DemoDebug"
 >> = function DemoDebugScreen(_props) {
-  const { setThemeContextOverride, themeContext, themed } = useAppTheme();
+  const { setThemeContextOverride, themeContext, themed, theme } = useAppTheme();
   const {
     authenticationStore: { logout },
   } = useStores();
 
+  // Push notification state
+  const [expoPushToken, setExpoPushToken] = useState<string>('');
+  const [notificationError, setNotificationError] = useState<NotificationPermissionError | null>(null);
+  const [isNotificationLoading, setIsNotificationLoading] = useState(false);
+
   // @ts-expect-error
   const usingFabric = global.nativeFabricUIManager != null;
+
+  // Setup push notifications
+  useEffect(() => {
+    const initializeNotifications = async () => {
+      setIsNotificationLoading(true);
+      try {
+        const token = await registerForPushNotificationsAsync(
+          theme.colors.palette.primary500
+        );
+        setExpoPushToken(token || '');
+        setNotificationError(null);
+      } catch (error) {
+        setNotificationError(error as NotificationPermissionError);
+        console.error('Push notification setup failed:', error);
+      } finally {
+        setIsNotificationLoading(false);
+      }
+    };
+
+    initializeNotifications();
+
+    // Set up notification listeners
+    const cleanup = setupNotificationListeners();
+    
+    return cleanup;
+  }, [theme.colors.palette.primary500]);
 
   const demoReactotron = useMemo(
     () => async () => {
@@ -50,12 +88,13 @@ export const DemoDebugScreen: FC<DemoTabScreenProps<
             appVersion: Application.nativeApplicationVersion,
             appBuildVersion: Application.nativeBuildVersion,
             hermesEnabled: usingHermes,
+            pushToken: expoPushToken,
           },
           important: true,
         });
       }
     },
-    []
+    [expoPushToken]
   );
 
   const toggleTheme = useCallback(() => {
@@ -69,6 +108,55 @@ export const DemoDebugScreen: FC<DemoTabScreenProps<
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setThemeContextOverride(undefined);
   }, [setThemeContextOverride]);
+
+  // Test push notification
+  const testPushNotification = useCallback(async () => {
+    if (!expoPushToken) {
+      Alert.alert('Error', 'No push token available. Make sure notifications are enabled.');
+      return;
+    }
+
+    try {
+      const success = await sendPushNotification(
+        expoPushToken,
+        'Test Notification 🚀',
+        'This is a test notification from the debug screen!',
+        { 
+          screen: 'debug',
+          timestamp: new Date().toISOString(),
+          testData: 'Hello from Dooit!'
+        }
+      );
+
+      if (success) {
+        Alert.alert('Success', 'Test notification sent! Check your notification tray.');
+      } else {
+        Alert.alert('Error', 'Failed to send test notification. Check console for details.');
+      }
+    } catch (error) {
+      Alert.alert('Error', `Failed to send notification: ${error}`);
+    }
+  }, [expoPushToken]);
+
+  const getNotificationStatus = () => {
+    if (isNotificationLoading) return 'Setting up...';
+    if (notificationError) {
+      switch (notificationError.code) {
+        case 'PERMISSION_DENIED':
+          return 'Permission denied';
+        case 'NO_DEVICE':
+          return 'Simulator (not supported)';
+        case 'NO_PROJECT_ID':
+          return 'Config error';
+        case 'TOKEN_ERROR':
+          return 'Token error';
+        default:
+          return 'Setup failed';
+      }
+    }
+    if (expoPushToken) return 'Ready';
+    return 'Not available';
+  };
 
   return (
     <Screen
@@ -96,6 +184,64 @@ export const DemoDebugScreen: FC<DemoTabScreenProps<
       <View style={themed($itemsContainer)}>
         <Button onPress={toggleTheme} text={`Toggle Theme: ${themeContext}`} />
       </View>
+
+      {/* Push Notifications Section */}
+      <Text
+        style={themed($title)}
+        preset="heading"
+        text="Push Notifications"
+      />
+      <View style={themed($itemsContainer)}>
+        <ListItem
+          LeftComponent={
+            <View style={themed($item)}>
+              <Text preset="bold">Notification Status</Text>
+              <Text style={notificationError ? themed($errorText) : undefined}>
+                {getNotificationStatus()}
+              </Text>
+            </View>
+          }
+        />
+        {expoPushToken && (
+          <ListItem
+            LeftComponent={
+              <View style={themed($item)}>
+                <Text preset="bold">Push Token</Text>
+                <Text style={themed($tokenText)} numberOfLines={2}>
+                  {expoPushToken}
+                </Text>
+              </View>
+            }
+          />
+        )}
+        {notificationError && (
+          <ListItem
+            LeftComponent={
+              <View style={themed($item)}>
+                <Text preset="bold" style={themed($errorText)}>Error Details</Text>
+                <Text style={themed($errorText)}>
+                  {notificationError.message}
+                </Text>
+              </View>
+            }
+          />
+        )}
+      </View>
+      <View style={themed($buttonContainer)}>
+        <Button
+          style={themed($button)}
+          text="Send Test Notification"
+          onPress={testPushNotification}
+          disabled={!expoPushToken || isNotificationLoading}
+        />
+      </View>
+
+      {/* App Info Section */}
+      <Text
+        style={themed($title)}
+        preset="heading"
+        text="App Information"
+      />
       <View style={themed($itemsContainer)}>
         <ListItem
           LeftComponent={
@@ -199,4 +345,14 @@ const $hint: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
   fontSize: 12,
   lineHeight: 15,
   paddingBottom: spacing.lg,
+});
+
+const $errorText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  color: colors.error,
+});
+
+const $tokenText: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
+  fontSize: 10,
+  color: colors.textDim,
+  marginTop: spacing.xs,
 });
