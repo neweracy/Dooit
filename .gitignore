@@ -97,6 +97,8 @@ web-build/
 !.yarn/sdks
 !.yarn/versions
 .env
-
+google-services.json
+firebase-service-account.json
+dooit-6e563-firebase-adminsdk-fbsvc-a82e6fd47e.json
 key.txt.pub
 key.txt.pub
