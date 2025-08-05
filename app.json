@@ -27,7 +27,8 @@
       "allowBackup": false,
       "splash": {
         "backgroundColor": "#fff"
-      }
+      },
+      "googleServicesFile": "./google-services.json"
     },
     "ios": {
       "icon": "./assets/images/app-icon-ios.png",
