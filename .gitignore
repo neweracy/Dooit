@@ -85,7 +85,10 @@ web-build/
 
 # Configurations
 !env.js
-.env
+.env.*.js
+.env.local
+.env.*.local
+
 
 /coverage
 
@@ -96,5 +99,10 @@ web-build/
 !.yarn/releases
 !.yarn/sdks
 !.yarn/versions
-.env
-.env
+
+google-services.json
+firebase-service-account.json
+dooit-6e563-firebase-adminsdk-fbsvc-a82e6fd47e.json
+key.txt.pub
+key.txt.pub
+dooit-6e563-firebase-adminsdk-fbsvc-a82e6fd47e.json
