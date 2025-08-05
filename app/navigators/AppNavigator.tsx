@@ -5,6 +5,7 @@
  * and a "main" flow which the user will use once logged in.
  */
 import { NavigationContainer, NavigatorScreenParams } from "@react-navigation/native"
+import React from "react"
 import { createNativeStackNavigator, NativeStackScreenProps } from "@react-navigation/native-stack"
 import { observer } from "mobx-react-lite"
 import * as Screens from "@/screens"
@@ -13,7 +14,9 @@ import { useStores } from "../models"
 import { DemoNavigator, DemoTabParamList } from "./DemoNavigator"
 import { navigationRef, useBackButtonHandler } from "./navigationUtilities"
 import { useAppTheme, useThemeProvider } from "@/utils/useAppTheme"
-import { ComponentProps } from "react"
+import { ComponentProps, useEffect } from "react"
+import { Alert } from "react-native"
+import { AlertTongle, showQueuedAlert } from "@/components"
 
 /**
  * This type allows TypeScript to know what routes are defined in this navigator
@@ -33,7 +36,9 @@ export type AppStackParamList = {
   Login: undefined
   Demo: NavigatorScreenParams<DemoTabParamList>
   // 🔥 Your screens go here
-  // IGNITE_GENERATOR_ANCHOR_APP_STACK_PARAM_LIST
+  ChooseAuth: undefined
+	SignUp: undefined
+	// IGNITE_GENERATOR_ANCHOR_APP_STACK_PARAM_LIST
 }
 
 /**
@@ -52,12 +57,34 @@ const Stack = createNativeStackNavigator<AppStackParamList>()
 
 const AppStack = observer(function AppStack() {
   const {
-    authenticationStore: { isAuthenticated },
+    authenticationStore: { isAuthenticated,checkServerStatus },
   } = useStores()
 
   const {
     theme: { colors },
   } = useAppTheme()
+
+  useEffect(() => {
+    const checkStatus = async () => {
+      const status = await checkServerStatus();
+      if (!status.isRunning) {
+        showQueuedAlert({
+          title: "No connection",
+          message: status.message,
+       
+        })
+      }
+    };
+    
+    // Initial check
+    checkStatus();
+    
+    // Set up interval for periodic checks (every 30 seconds)
+    const intervalId = setInterval(checkStatus, 30000);
+    
+    // Clean up the interval when the component unmounts or when checkServerStatus changes
+    return () => clearInterval(intervalId);
+  }, [checkServerStatus])
 
   return (
     <Stack.Navigator
@@ -68,22 +95,24 @@ const AppStack = observer(function AppStack() {
           backgroundColor: colors.background,
         },
       }}
-      initialRouteName={isAuthenticated ? "Welcome" : "Login"}
+      initialRouteName={isAuthenticated ? "Demo" : "Welcome"}
     >
       {isAuthenticated ? (
         <>
-          <Stack.Screen name="Welcome" component={Screens.WelcomeScreen} />
 
           <Stack.Screen name="Demo" component={DemoNavigator} />
         </>
       ) : (
         <>
+          <Stack.Screen name="Welcome" component={Screens.WelcomeScreen} />
           <Stack.Screen name="Login" component={Screens.LoginScreen} />
+          <Stack.Screen name="ChooseAuth" component={Screens.ChooseAuthScreen} />
+          <Stack.Screen name="SignUp" component={Screens.SignUpScreen} />
         </>
       )}
 
       {/** 🔥 Your screens go here */}
-      {/* IGNITE_GENERATOR_ANCHOR_APP_STACK_SCREENS */}
+			{/* IGNITE_GENERATOR_ANCHOR_APP_STACK_SCREENS */}
     </Stack.Navigator>
   )
 })
@@ -92,8 +121,11 @@ export interface NavigationProps
   extends Partial<ComponentProps<typeof NavigationContainer<AppStackParamList>>> {}
 
 export const AppNavigator = observer(function AppNavigator(props: NavigationProps) {
-  const { themeScheme, navigationTheme, setThemeContextOverride, ThemeProvider } =
+  const { themeScheme, navigationTheme, ThemeProvider, setThemeContextOverride } =
     useThemeProvider()
+  // useEffect(() => {
+  //   // setThemeContextOverride("light")
+  // }, [setThemeContextOverride])
 
      const exitRoutes = ["welcome","Demo"] // Add any other routes that should exit the app here
   // This hook will handle the back button on Android and exit the app if the user is on an exit route
