@@ -2,7 +2,7 @@
 
 <div align="center">
 
-<img src="./assets/images/app-icon-all.png" alt="Dooit Logo" width="200" height="200" />
+<img src="./assets/images/app-icon-all.png" alt="Dooit Logo" width="200" height="201" />
 
 </div>
 
