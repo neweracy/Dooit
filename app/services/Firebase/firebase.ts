@@ -1,7 +1,7 @@
 // Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-import { getAnalytics } from "firebase/analytics";
-import { getAuth } from "firebase/auth";
+import { initializeApp } from "firebase/app"
+import { getAnalytics } from "firebase/analytics"
+import { getAuth } from "firebase/auth"
 // import { getFirestore } from "firebase/firestore";
 // import { getStorage } from "firebase/storage";
 // import { getFunctions } from "firebase/functions";
@@ -18,9 +18,9 @@ const firebaseConfig = {
   storageBucket: "dooit-5c76d.firebasestorage.app",
   messagingSenderId: "477979903432",
   appId: "1:477979903432:web:3c6d87a5dc4424887cecfd",
-  measurementId: "G-12ZZX5PBG0"
-};
+  measurementId: "G-12ZZX5PBG0",
+}
 
 // Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
+const app = initializeApp(firebaseConfig)
+const analytics = getAnalytics(app)

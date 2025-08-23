@@ -5,5 +5,3 @@ test("can be created", () => {
 
   expect(instance).toBeTruthy()
 })
-
-

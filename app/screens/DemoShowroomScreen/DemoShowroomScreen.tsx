@@ -9,6 +9,7 @@ import { DemoTabParamList, DemoTabScreenProps } from "../../navigators/DemoNavig
 import type { Theme, ThemedStyle } from "@/theme"
 import { $styles } from "@/theme"
 import { useSafeAreaInsetsStyle } from "../../utils/useSafeAreaInsetsStyle"
+import { useIsMounted } from "../../utils/useIsMounted"
 import * as Demos from "./demos"
 import { DrawerIconButton } from "./DrawerIconButton"
 import SectionListWithKeyboardAwareScrollView from "./SectionListWithKeyboardAwareScrollView"
@@ -99,6 +100,7 @@ export const DemoShowroomScreen: FC<DemoTabScreenProps<"DemoShowroom">> =
     const menuRef = useRef<ListViewRef<DemoListItem["item"]>>(null)
     const route = useRoute<RouteProp<DemoTabParamList, "DemoShowroom">>()
     const params = route.params
+    const isMounted = useIsMounted()
 
     const { themed, theme } = useAppTheme()
 
@@ -110,39 +112,66 @@ export const DemoShowroomScreen: FC<DemoTabScreenProps<"DemoShowroom">> =
       }
     }, [open])
 
-    const handleScroll = useCallback((sectionIndex: number, itemIndex = 0) => {
-      try {
-        listRef.current?.scrollToLocation({
-          animated: true,
-          itemIndex,
-          sectionIndex,
-          viewPosition: 0.25,
-        })
-      } catch (e) {
-        console.error(e)
-      }
-    }, [])
+    const handleScroll = useCallback(
+      (sectionIndex: number, itemIndex = 0) => {
+        if (!isMounted()) return
+
+        try {
+          listRef.current?.scrollToLocation({
+            animated: true,
+            itemIndex,
+            sectionIndex,
+            viewPosition: 0.25,
+          })
+        } catch (e) {
+          // Silently handle scroll errors to prevent console spam
+          // Only log in development mode
+          if (__DEV__) {
+            console.warn("Scroll error:", e)
+          }
+        }
+      },
+      [isMounted],
+    )
 
     // handle Web links
     useEffect(() => {
-      if (params !== undefined && Object.keys(params).length > 0) {
-        const demoValues = Object.values(Demos)
-        const findSectionIndex = demoValues.findIndex(
-          (x) => x.name.toLowerCase() === params.queryIndex,
-        )
-        let findItemIndex = 0
-        if (params.itemIndex) {
-          try {
-            findItemIndex = demoValues[findSectionIndex]
-              .data({ themed, theme })
-              .findIndex((u) => slugify(translate(u.props.name)) === params.itemIndex)
-          } catch (err) {
-            console.error(err)
-          }
-        }
-        handleScroll(findSectionIndex, findItemIndex)
+      if (!isMounted() || !params || Object.keys(params).length === 0) {
+        return
       }
-    }, [handleScroll, params, theme, themed])
+
+      const demoValues = Object.values(Demos)
+      const findSectionIndex = demoValues.findIndex(
+        (x) => x.name.toLowerCase() === params.queryIndex,
+      )
+
+      if (findSectionIndex === -1) {
+        return
+      }
+
+      let findItemIndex = 0
+      if (params.itemIndex) {
+        try {
+          const demoData = demoValues[findSectionIndex]?.data({ themed, theme })
+          if (demoData) {
+            findItemIndex = demoData.findIndex(
+              (u) => slugify(translate(u.props.name)) === params.itemIndex,
+            )
+            if (findItemIndex === -1) {
+              findItemIndex = 0
+            }
+          }
+        } catch (err) {
+          // Silently handle translation errors to prevent console spam
+          // Only log in development mode
+          if (__DEV__) {
+            console.warn("Translation error for item index:", err)
+          }
+          findItemIndex = 0
+        }
+      }
+      handleScroll(findSectionIndex, findItemIndex)
+    }, [handleScroll, params, theme, themed, isMounted])
 
     const scrollToIndexFailed = (info: {
       index: number
