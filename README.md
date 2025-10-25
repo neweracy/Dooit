@@ -17,7 +17,7 @@ A powerful and user-friendly to-do list application built with React Native and 
   - Create, edit, and delete tasks
   - Mark tasks as complete/incomplete
   - Add task descriptions and due dates
-  - Real-time synchronization
+  - Real-time synchronizations
 
 - 🔐 User Authentication
   - Email/password sign-up and login
