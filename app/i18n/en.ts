@@ -9,8 +9,8 @@ const en = {
   },
   welcomeScreen: {
     postscript:
-      "psst  — This probably isn't what your app looks like. (Unless your designer handed you these screens, and in that case, ship it!)",
-    readyForLaunch: "Your app, almost ready for launch!",
+      "Dooit helps you stay organized and productive with its intuitive interface and robust features.",
+    readyForLaunch: "Let's Start Something fun",
     exciting: "(ohh, this is exciting!)",
     letsGo: "Let's go!",
   },
@@ -38,9 +38,12 @@ const en = {
       "Enter your details below to unlock top secret info. You'll never guess what we've got waiting. Or maybe you will; it's not rocket science here.",
     emailFieldLabel: "Email",
     passwordFieldLabel: "Password",
+    passwordFieldLabelConf: "Confirm Password",
+
     emailFieldPlaceholder: "Enter your email address",
     passwordFieldPlaceholder: "Super secret password here",
     tapToLogIn: "Tap to log in!",
+    toRegister: "Don't have an account" ,
     hint: "Hint: you can use any email address and your favorite password :)",
   },
   demoNavigator: {
@@ -73,7 +76,7 @@ const en = {
     hireUsLink: "Send us a message",
   },
   demoShowroomScreen: {
-    jumpStart: "Components to jump start your project!",
+    jumpStart: "Welcome {{user}}",
     lorem2Sentences:
       "Nulla cupidatat deserunt amet quis aliquip nostrud do adipisicing. Adipisicing excepteur elit laborum Lorem adipisicing do duis.",
     demoHeaderTxExample: "Yay",
@@ -120,6 +123,18 @@ const en = {
       content:
         "No favorites have been added yet. Tap the heart on an episode to add it to your favorites!",
     },
+  },
+
+  signUpScreen: {
+    signUp: "Create Account",
+    enterDetails:
+      "Fill in your details below to access top secret content. It’s not Area 51... but close enough.",
+    emailFieldLabel: "Email",
+    passwordFieldLabel: "Password",
+    emailFieldPlaceholder: "Enter your email address",
+    passwordFieldPlaceholder: "Choose a strong password",
+    ToLogIn: "Already have an account? Log in here!",
+    hint: "Hint: any valid email works. Make your password memorable!",
   },
 
   ...demoEn,

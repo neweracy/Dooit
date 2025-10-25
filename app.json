@@ -27,7 +27,8 @@
       "allowBackup": false,
       "splash": {
         "backgroundColor": "#fff"
-      }
+      },
+      "googleServicesFile": "./google-services.json"
     },
     "ios": {
       "icon": "./assets/images/app-icon-ios.png",
@@ -35,6 +36,19 @@
       "bundleIdentifier": "com.dooit",
       "splash": {
         "backgroundColor": "#fff"
+      },
+      "privacyManifests": {
+        "NSPrivacyAccessedAPITypes": [
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryUserDefaults",
+            "NSPrivacyAccessedAPITypeReasons": [
+              "CA92.1"
+            ]
+          }
+        ]
+      },
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "web": {
@@ -45,6 +59,13 @@
       }
     },
     "plugins": [
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/notification-icon.png",
+          "color": "#ffffff"
+        }
+      ],
       "expo-localization",
       "expo-font",
       [
