@@ -95,7 +95,7 @@ export const AppNavigator = observer(function AppNavigator(props: NavigationProp
   const { themeScheme, navigationTheme, setThemeContextOverride, ThemeProvider } =
     useThemeProvider()
 
-     const exitRoutes = ["welcome","Demo"] // Add any other routes that should exit the app here
+  const exitRoutes = ["welcome", "Demo"] // Add any other routes that should exit the app here
   // This hook will handle the back button on Android and exit the app if the user is on an exit route
   // You can customize the exit routes by modifying the `exitRoutes` array
   useBackButtonHandler((routeName) => exitRoutes.includes(routeName))

@@ -15,5 +15,3 @@ export interface Firebase extends Instance<typeof FirebaseModel> {}
 export interface FirebaseSnapshotOut extends SnapshotOut<typeof FirebaseModel> {}
 export interface FirebaseSnapshotIn extends SnapshotIn<typeof FirebaseModel> {}
 export const createFirebaseDefaultModel = () => types.optional(FirebaseModel, {})
-
-
