@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "56964832577",
+    "project_id": "dooit-6e563",
+    "storage_bucket": "dooit-6e563.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:56964832577:android:832649cf05baf356c895c0",
+        "android_client_info": {
+          "package_name": "com.dooit"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD6Pmp0uuBbzDywjw4-2el8hgHYZiZdvBU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,5 +1,5 @@
 import { observer } from "mobx-react-lite"
-import { FC } from "react"
+import { FC, useEffect } from "react"
 import { Image, ImageStyle, TextStyle, View, ViewStyle } from "react-native"
 import { Button, Text, Screen } from "@/components"
 import { isRTL } from "@/i18n"
@@ -13,10 +13,16 @@ import { useAppTheme } from "@/utils/useAppTheme"
 const welcomeLogo = require("../../assets/images/logo.png")
 const welcomeFace = require("../../assets/images/welcome-face.png")
 
+const logo = require("../../assets/images/app-icon-android-adaptive-foreground.png");
+
+
 interface WelcomeScreenProps extends AppStackScreenProps<"Welcome"> {}
 
 export const WelcomeScreen: FC<WelcomeScreenProps> = observer(function WelcomeScreen(_props) {
-  const { themed, theme } = useAppTheme()
+  const { themed, theme, setThemeContextOverride } = useAppTheme()
+  useEffect(() => {
+    setThemeContextOverride("light")
+  }, [setThemeContextOverride])
 
   const { navigation } = _props
   const {
@@ -24,13 +30,14 @@ export const WelcomeScreen: FC<WelcomeScreenProps> = observer(function WelcomeSc
   } = useStores()
 
   function goNext() {
-    navigation.navigate("Demo", { screen: "DemoShowroom", params: {} })
+    navigation.navigate("ChooseAuth")
   }
 
   useHeader(
     {
-      rightTx: "common:logOut",
+      
       onRightPress: logout,
+      
     },
     [logout],
   )
@@ -40,7 +47,7 @@ export const WelcomeScreen: FC<WelcomeScreenProps> = observer(function WelcomeSc
   return (
     <Screen preset="fixed" contentContainerStyle={$styles.flex1}>
       <View style={themed($topContainer)}>
-        <Image style={themed($welcomeLogo)} source={welcomeLogo} resizeMode="contain" />
+        <Image style={themed($welcomeLogo)} source={logo} resizeMode="contain" />
         <Text
           testID="welcome-heading"
           style={themed($welcomeHeading)}
@@ -48,12 +55,7 @@ export const WelcomeScreen: FC<WelcomeScreenProps> = observer(function WelcomeSc
           preset="heading"
         />
         <Text tx="welcomeScreen:exciting" preset="subheading" />
-        <Image
-          style={$welcomeFace}
-          source={welcomeFace}
-          resizeMode="contain"
-          tintColor={theme.colors.palette.neutral900}
-        />
+       
       </View>
 
       <View style={themed([$bottomContainer, $bottomContainerInsets])}>
@@ -90,9 +92,9 @@ const $bottomContainer: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
 })
 
 const $welcomeLogo: ThemedStyle<ImageStyle> = ({ spacing }) => ({
-  height: 88,
+  height: 180,
   width: "100%",
-  marginBottom: spacing.xxl,
+  marginBottom: spacing.xl,
 })
 
 const $welcomeFace: ImageStyle = {
